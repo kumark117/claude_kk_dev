@@ -26,3 +26,4 @@
 2026-11-26T19:03:22+00:00 | project_0 | build | attempt_1_end_rc0 | 452
 2026-11-26T19:03:22+00:00 | project_0 | test | run_start | 0
 2026-11-26T19:03:35+00:00 | project_0 | test | run_rc0 | 13
+2026-11-26T19:03:38+00:00 | project_0 | build | passed | 468
