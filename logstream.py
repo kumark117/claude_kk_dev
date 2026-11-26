@@ -41,7 +41,9 @@ for raw in sys.stdin:
         log(line)
         error(line)
         continue
-    if kind in ("assistant", "user"):
+    if kind == "system" and ev.get("subtype") == "init":
+        log(f"model {ev.get('model')}")
+    elif kind in ("assistant", "user"):
         content = ev.get("message", {}).get("content", [])
         for c in content if isinstance(content, list) else []:
             if c.get("type") == "text" and kind == "assistant":
@@ -67,5 +69,7 @@ for raw in sys.stdin:
     elif kind == "result":
         log(f"result {ev.get('subtype')} turns={ev.get('num_turns')} "
             f"cost_usd={ev.get('total_cost_usd')} usage={json.dumps(ev.get('usage'))}")
+        if ev.get("modelUsage"):
+            log(f"model_usage {json.dumps(ev['modelUsage'])}")
         if ev.get("is_error"):
             error(f"{ev.get('subtype')} {ev.get('result', '')}")

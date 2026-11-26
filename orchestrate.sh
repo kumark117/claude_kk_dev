@@ -277,6 +277,8 @@ report() {
         printf "- Retry waits: %d (%ds scheduled); usage limits hit: %d\n", nr, rw, ul
         printf "- First run start: %s; last event: %s\n", s, e
       }' "$TLOG"
+    echo; echo "## Token usage (from logs/)"; echo
+    python3 "$ROOT/usage.py" "$LOGS" || echo "Token usage unavailable: usage.py failed."
   } > "$f"
   say "wrote $f"
 }
@@ -302,7 +304,7 @@ status() {
 dry_run() {
   local sb="$ROOT/.dryrun"; rm -rf "$sb"; mkdir -p "$sb/root"
   git init -q --bare "$sb/remote.git"
-  cp "$ROOT/orchestrate.sh" "$ROOT/logstream.py" "$ROOT/config.sh" "$ROOT/.gitignore" "$sb/root/"
+  cp "$ROOT/orchestrate.sh" "$ROOT/logstream.py" "$ROOT/usage.py" "$ROOT/config.sh" "$ROOT/.gitignore" "$sb/root/"
   cp -r "$ROOT/project_0" "$sb/root/"; rm -f "$sb/root/project_0/"{SPEC.md,timings.log}
   echo "# SPEC (stub, already designed)" > "$sb/root/project_0/SPEC.md"
   for i in 1 2; do mkdir -p "$sb/root/project_$i"; echo "fake requirement $i" > "$sb/root/project_$i/requirements.md"; done
@@ -315,10 +317,15 @@ if [[ " $* " == *" -p "* ]]; then
   if [ "$p" = project_2 ] && [ $n = 1 ]; then printf '#!/usr/bin/env bash\necho FAIL; exit 1\n' > test.sh
   else printf '#!/usr/bin/env bash\necho stub tests ok\n' > test.sh; fi
   echo "# $p (stub build)" > README.md; echo "ANTHROPIC_API_KEY=sk-ant-FAKEFAKEFAKEFAKEFAKE" > .env
+  echo '{"type":"system","subtype":"init","model":"stub-model"}'
   echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"echo stub"}}]}}'
   sleep 1
   echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","content":"stub"}]}}'
-  echo '{"type":"result","subtype":"success","num_turns":1,"is_error":false}'
+  result() {  # $1 = running cost, $2 = running output tokens; usage is per segment
+    echo '{"type":"result","subtype":"success","num_turns":1,"is_error":false,"total_cost_usd":'$1',"usage":{"input_tokens":1,"cache_creation_input_tokens":10,"cache_read_input_tokens":100,"output_tokens":1000},"modelUsage":{"stub-model":{"inputTokens":1,"cacheCreationInputTokens":10,"cacheReadInputTokens":100,"outputTokens":'$2',"costUSD":'$1'}}}'
+  }
+  result 0.01 1000
+  if [ "$p" = project_2 ]; then result 0.02 2000; fi
 else
   for d in project_1 project_2; do sleep 2; echo "# SPEC (stub) $d" > $d/SPEC.md; touch $d/.approved; done; sleep 2; echo "stub design done"
 fi
@@ -352,7 +359,10 @@ run() {
   wait "$dpid"
   tlog root run end $(( $(now) - t0 )); say "run finished in $(clock $(( $(now) - t0 )))"
   report
-  git_sync "pipeline report and timings" REPORT.md all_timings.log logs logstream.py orchestrate.sh config.sh README.md .gitignore \
+  # each timings.log gains lines after its project's build commit, so include them here
+  local p tlogs=()
+  for p in $(projects); do tlogs+=("$p/timings.log"); done
+  git_sync "pipeline report and timings" REPORT.md all_timings.log logs logstream.py usage.py orchestrate.sh config.sh README.md .gitignore "${tlogs[@]}" \
     || say "final git sync failed"
 }
 
