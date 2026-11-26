@@ -1,0 +1,26 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+id_rsa*
+credentials*.json
+# envs / deps / caches
+.venv/
+venv/
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+coverage/
+.coverage
+*.tsbuildinfo
+# orchestrator local state
+.state/
+.dryrun/
