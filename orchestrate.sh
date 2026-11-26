@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Two-phase pipeline: sequential interactive design -> parallel headless builds.
 # Usage: ./orchestrate.sh [run|status|report|dry-run]
+# load nvm so node/npm are the Linux ones, whatever shell started us
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
 set -uo pipefail
 
 ROOT="${ORCH_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
