@@ -1,0 +1,2795 @@
+===== attempt 1 start 2026-11-26T19:22:20+00:00 =====
+2026-11-26T19:22:26+00:00 | +00:06 | start Bash: cat SPEC.md; echo ----; ls -la; echo ----; cat timings.log; echo; cat ../.gitignore 2>/dev/null
+2026-11-26T19:22:27+00:00 | +00:06 | done  Bash (0.5s, ok): cat SPEC.md; echo ----; ls -la; echo ----; cat timings.log; echo; cat ../.gitignore 2>/dev/null
+    s: `dev` (`next dev`), `build` (`next build`),
+    `start` (`next start`), `test` (`vitest run`).
+    
+    Only first-time setup (step 2) may need network access. Once installed,
+    `./test.sh` must pass offline.
+    
+    ## 10. Acceptance criteria
+    
+    1. From a fresh checkout, `./test.sh` installs dependencies, runs all four test
+       commands and exits 0.
+    2. A second run with the network unavailable and no environment variables set
+       also exits 0.
+    3. Any failing test makes `./test.sh` exit non-zero.
+    4. Following the README with no variables set, a question about the sample
+       documents shows a `[stub]` answer and at least one source in the browser
+       (manual check).
+    5. An unrelated question shows the fallback answer and "No matching sources."
+    6. With the proxy variables pointing at a compatible endpoint, the answer comes
+       from that endpoint; verified automatically only against the mock.
+    7. If the backend is stopped, the page shows "Backend unavailable".
+    8. All direct and listed dependency versions match section 3, and no secrets are
+       in the repository.
+    
+    ## 11. Left to the builder
+    
+    Sample and fixture text, styling, internal function and type names, and any
+    Next.js config needed to build cleanly (for example, setting the Turbopack root
+    to `frontend/` if Next.js picks the wrong one).
+    ----
+    total 32
+    drwxr-xr-x  2 lenovo lenovo  4096 Nov 26 19:22 .
+    drwxr-xr-x 17 lenovo lenovo  4096 Nov 26 19:21 ..
+    -rw-r--r--  1 lenovo lenovo 15494 Nov 26 19:21 SPEC.md
+    -rw-r--r--  1 lenovo lenovo   180 Nov 26 19:21 requirements.md
+    -rw-r--r--  1 lenovo lenovo   131 Nov 26 19:22 timings.log
+    ----
+    2026-11-26T19:22:06+00:00 | project_7 | design | approved | 17
+    2026-11-26T19:22:20+00:00 | project_7 | build | attempt_1_start | 0
+    
+    # secrets
+    .env
+    .env.*
+    !.env.example
+    *.pem
+    *.key
+    *.p12
+    id_rsa*
+    credentials*.json
+    # envs / deps / caches
+    .venv/
+    venv/
+    node_modules/
+    .next/
+    __pycache__/
+    *.pyc
+    .pytest_cache/
+    .mypy_cache/
+    .ruff_cache/
+    .cache/
+    coverage/
+    .coverage
+    *.tsbuildinfo
+    # orchestrator local state
+    .state/
+    .dryrun/
+    .approved
+2026-11-26T19:22:31+00:00 | +00:10 | start Bash: cat requirements.md; echo ----; which node python3; node --version 2>&1; python3 --version; ls ~/.nvm 2>/dev/null | head; npm --version 2>&1
+2026-11-26T19:22:31+00:00 | +00:11 | done  Bash (0.6s, ok): cat requirements.md; echo ----; which node python3; node --version 2>&1; python3 --version; ls ~/.nvm 2>/dev/null | head
+    # project_7 requirements
+    
+    A very minimal RAG project: UI (Next.js), talking to a FastAPI server, which
+    talks to an LLM (dummied up initially with an optional proxy/stub function).
+    ----
+    /home/lenovo/.nvm/versions/node/v26.13.1/bin/node
+    /usr/bin/python3
+    v26.13.1
+    Python 3.14.4
+    CODE_OF_CONDUCT.md
+    CONTRIBUTING.md
+    Dockerfile
+    GOVERNANCE.md
+    LICENSE.md
+    Makefile
+    PROJECT_CHARTER.md
+    README.md
+    ROADMAP.md
+    alias
+    11.20.0
+2026-11-26T19:23:29+00:00 | +01:09 | claude: I'll set up the pinned manifests and install dependencies first, then write the tests before the code.
+2026-11-26T19:23:34+00:00 | +01:13 | start Bash: set -e
+mkdir -p backend/app backend/tests frontend/app/api/ask frontend/components frontend/lib frontend/tests e2e/fixtures/docs data
+cat > .gitignore <<'EOF'
+# secrets
+.env*
+!.env.example
+
+# environments, dependencies, build output and caches
+.venv/
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.tsbuildinfo
+next-env.d.ts
+EOF
+echo '26.13.1' > .nvmrc
+printf '[pytest]\npythonpath = backend\n' > pytest.ini
+cat > backend/requirements.txt <<'EOF'
+annotated-doc==0.0.7
+annotated-types==0.8.0
+anyio==4.16.0
+certifi==2026.11.20
+click==8.5.1
+fastapi==0.165.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.29.0
+idna==3.20
+iniconfig==2.3.1
+opentelemetry-api==1.45.2
+packaging==26.4
+pluggy==1.7.0
+pydantic==2.14.4
+pydantic_core==2.50.5
+Pygments==2.21.0
+pytest==9.2.0
+starlette==1.10.0
+typing-inspection==0.4.5
+typing_extensions==4.16.0
+uvicorn==0.54.0
+EOF
+cat > frontend/package.json <<'EOF'
+{
+  "name": "minimal-rag-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.11",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "jsdom": "31.0.1",
+    "typescript": "5.9.3",
+    "vite": "8.4.0",
+    "vitest": "5.1.2"
+  }
+}
+EOF
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -q -r backend/requirements.txt 2>&1 | tail -20
+npm install --prefix frontend --no-audit --no-fund 2>&1 | tail -30
+2026-11-26T19:29:23+00:00 | +07:03 | done  Bash (349.5s, ok): set -e
+mkdir -p backend/app backend/tests frontend/app/api/ask frontend/components frontend/lib frontend/tests e2e/fixtu
+    added 103 packages in 4m
+2026-11-26T19:29:25+00:00 | +07:05 | claude: Dependencies are installed. Now the backend tests, written before any implementation.
+2026-11-26T19:30:08+00:00 | +07:47 | start Bash: set -e
+cat > backend/tests/test_retrieval.py <<'EOF'
+import pytest
+
+from app.retrieval import (
+    DocumentError,
+    Index,
+    chunk_text,
+    load_chunks,
+    tokenize,
+)
+
+
+def write(folder, name, text):
+    path = folder / name
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def index_of(folder, **files):
+    for name, text in files.items():
+        write(folder, f"{name}.md", text)
+    return Index(load_chunks(folder))
+
+
+# Loading
+
+
+def test_loads_only_md_and_txt_sorted_by_name(tmp_path):
+    write(tmp_path, "c.txt", "charlie")
+    write(tmp_path, "a.md", "alpha")
+    write(tmp_path, "b.rst", "ignored")
+    write(tmp_path, "d.json", "ignored")
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    write(nested, "e.md", "ignored, no recursion")
+    (tmp_path / "folder.md").mkdir()
+
+    chunks = load_chunks(tmp_path)
+
+    assert [(c.file, c.text) for c in chunks] == [("a.md", "alpha"), ("c.txt", "charlie")]
+
+
+def test_chunks_keep_file_name_and_position(tmp_path):
+    write(tmp_path, "a.md", "one\n\ntwo")
+    write(tmp_path, "b.md", "three")
+
+    chunks = load_chunks(tmp_path)
+
+    assert [(c.file, c.position, c.text) for c in chunks] == [
+        ("a.md", 0, "one"),
+        ("a.md", 1, "two"),
+        ("b.md", 0, "three"),
+    ]
+
+
+def test_reads_utf8(tmp_path):
+    write(tmp_path, "a.md", "Crème brûlée — 日本語")
+
+    assert load_chunks(tmp_path)[0].text == "Crème brûlée — 日本語"
+
+
+def test_empty_folder_is_allowed(tmp_path):
+    assert load_chunks(tmp_path) == []
+
+
+def test_missing_folder_is_an_error(tmp_path):
+    missing = tmp_path / "nope"
+
+    with pytest.raises(DocumentError, match="nope"):
+        load_chunks(missing)
+
+
+def test_a_file_as_documents_folder_is_an_error(tmp_path):
+    path = write(tmp_path, "a.md", "alpha")
+
+    with pytest.raises(DocumentError, match="a.md"):
+        load_chunks(path)
+
+
+def test_bad_utf8_is_an_error_naming_the_file(tmp_path):
+    (tmp_path / "bad.txt").write_bytes(b"ok \xff\xfe not utf-8")
+
+    with pytest.raises(DocumentError, match="bad.txt"):
+        load_chunks(tmp_path)
+
+
+# Chunking
+
+
+def test_splits_on_blank_lines_trims_and_drops_empty_blocks():
+    text = "\n\n  first line\nsecond line  \n\n   \n\t\n\n\nthird\n\n"
+
+    assert chunk_text(text) == ["first line\nsecond line", "third"]
+
+
+def test_normalizes_line_endings():
+    assert chunk_text("a\r\nb\r\n\r\nc\r\rd") == ["a\nb", "c", "d"]
+
+
+def test_heading_joins_the_next_block():
+    assert chunk_text("# Title\n\nBody text.\n\nMore.") == ["# Title\nBody text.", "More."]
+
+
+def test_consecutive_headings_all_join_the_next_block():
+    text = "# Title\n\n## Sub\n### Subsub\n\nBody."
+
+    assert chunk_text(text) == ["# Title\n## Sub\n### Subsub\nBody."]
+
+
+def test_heading_with_no_following_block_is_dropped():
+    assert chunk_text("Body.\n\n# Trailing\n\n## Also trailing") == ["Body."]
+    assert chunk_text("# Only a heading") == []
+
+
+def test_block_with_heading_and_text_is_a_normal_chunk():
+    assert chunk_text("# Title\nBody.\n\nNext.") == ["# Title\nBody.", "Next."]
+
+
+def test_chunk_of_exactly_800_characters_is_not_split():
+    text = "a" * 399 + " " + "b" * 400
+
+    assert chunk_text(text) == [text]
+
+
+def test_long_chunk_splits_at_whitespace():
+    words = [f"word{i:04d}" for i in range(300)]
+
+    pieces = chunk_text(" ".join(words))
+
+    assert len(pieces) > 1
+    assert all(len(p) <= 800 for p in pieces)
+    assert [w for p in pieces for w in p.split()] == words
+
+
+def test_split_uses_all_800_characters_when_a_word_ends_there():
+    assert chunk_text("a" * 800 + " tail") == ["a" * 800, "tail"]
+
+
+def test_single_long_word_is_cut_at_800():
+    assert chunk_text("x" * 1700) == ["x" * 800, "x" * 800, "x" * 100]
+
+
+def test_long_word_after_short_text():
+    assert chunk_text("hi " + "y" * 900) == ["hi", "y" * 800, "y" * 100]
+
+
+def test_split_pieces_get_their_own_positions(tmp_path):
+    write(tmp_path, "a.md", "x" * 900 + "\n\nend")
+
+    assert [c.position for c in load_chunks(tmp_path)] == [0, 1, 2]
+
+
+# Tokenizing
+
+
+def test_tokenize_lowercases_and_splits_on_punctuation_and_underscore():
+    assert tokenize("Hello, WORLD! snake_case don't v2.5") == [
+        "hello", "world", "snake", "case", "don", "t", "v2", "5",
+    ]
+
+
+def test_tokenize_keeps_unicode_letters_and_digits():
+    assert tokenize("Über café 東京 ٤٢") == ["über", "café", "東京", "٤٢"]
+
+
+def test_tokenize_removes_every_stopword():
+    stopwords = (
+        "a an and are as at be by can do does for from how i in is it of on or "
+        "that the this to was what when where which who why with you"
+    )
+
+    assert tokenize(stopwords.upper()) == []
+    assert tokenize("Where is the cat?") == ["cat"]
+
+
+# Ranking
+
+
+def test_relevant_chunk_ranks_first(tmp_path):
+    index = index_of(
+        tmp_path,
+        cats="Cats purr and chase mice.",
+        rockets="Rockets burn fuel to reach orbit.",
+        bread="Bread needs flour, water and yeast.",
+    )
+
+    results = index.search("How does a rocket reach orbit?")
+
+    assert results[0].chunk.file == "rockets.md"
+    assert results[0].score > 0
+
+
+def test_score_matches_bm25_formula(tmp_path):
+    index = index_of(tmp_path, a="apple apple banana", b="cherry")
+
+    [result] = index.search("apple apple")
+
+    n_chunks, containing, f, length, average = 2, 1, 2, 3, 2.0
+    idf = math.log(1 + (n_chunks - containing + 0.5) / (containing + 0.5))
+    expected = idf * f * 2.5 / (f + 1.5 * (1 - 0.75 + 0.75 * length / average))
+    assert result.score == pytest.approx(expected)
+
+
+def test_chunk_length_ignores_stopwords(tmp_path):
+    index = index_of(tmp_path, a="the the the the apple", b="apple")
+
+    first, second = index.search("apple")
+
+    assert first.score == pytest.approx(second.score)
+
+
+def test_returns_at_most_three_results(tmp_path):
+    index = index_of(tmp_path, **{f"f{i}": "apple pie" for i in range(6)})
+
+    assert len(index.search("apple")) == 3
+
+
+def test_ties_order_by_file_then_position(tmp_path):
+    index = index_of(tmp_path, b="apple\n\napple", a="pear\n\napple", c="apple")
+
+    results = index.search("apple")
+
+    assert [(r.chunk.file, r.chunk.position) for r in results] == [
+        ("a.md", 1), ("b.md", 0), ("b.md", 1),
+    ]
+
+
+def test_higher_score_comes_first(tmp_path):
+    index = index_of(tmp_path, a="apple kiwi plum fig", b="apple apple apple apple")
+
+    results = index.search("apple")
+
+    assert [r.chunk.file for r in results] == ["b.md", "a.md"]
+    assert results[0].score > results[1].score
+
+
+def test_no_match_returns_empty_list(tmp_path):
+    assert index_of(tmp_path, a="apple").search("zebra") == []
+
+
+@pytest.mark.parametrize("question", ["What is the?", "?!...", ""])
+def test_question_without_usable_tokens_returns_empty_list(tmp_path, question):
+    assert index_of(tmp_path, a="what is the apple").search(question) == []
+
+
+def test_empty_folder_search_returns_empty_list(tmp_path):
+    assert Index(load_chunks(tmp_path)).search("apple") == []
+
+
+def test_chunks_made_only_of_stopwords_do_not_break_search(tmp_path):
+    assert index_of(tmp_path, a="the and of").search("apple") == []
+EOF
+sed -i 's/^import pytest\n/&/' backend/tests/test_retrieval.py
+sed -i '1s/^import pytest$/import math\n\nimport pytest/' backend/tests/test_retrieval.py
+
+cat > backend/tests/test_llm.py <<'EOF'
+import json
+
+import httpx
+import pytest
+
+from app.llm import ConfigError, LLMError, build_llm
+from app.retrieval import Chunk
+
+CHUNKS = [
+    Chunk(file="cats.md", position=0, text="Cats purr."),
+    Chunk(file="dogs.md", position=2, text="Dogs bark."),
+]
+KEY = "dummy-test-key"
+PROXY_ENV = {
+    "LLM_PROXY_URL": "http://127.0.0.1:9/v1",
+    "LLM_PROXY_MODEL": "test-model",
+    "LLM_PROXY_API_KEY": KEY,
+}
+
+
+def completion(content):
+    return {"choices": [{"message": {"role": "assistant", "content": content}}]}
+
+
+def recording_transport(requests, response=None):
+    def handler(request):
+        requests.append(request)
+        return response or httpx.Response(200, json=completion("canned"))
+
+    return httpx.MockTransport(handler)
+
+
+# Mode selection
+
+
+@pytest.mark.parametrize("env", [{}, {"LLM_PROXY_URL": ""}, {"LLM_PROXY_MODEL": "m"}])
+def test_stub_mode_when_proxy_url_is_empty(env):
+    assert build_llm(env).mode == "stub"
+
+
+def test_proxy_mode_when_proxy_url_is_set():
+    assert build_llm(PROXY_ENV).mode == "proxy"
+
+
+@pytest.mark.parametrize("model", [None, ""])
+def test_proxy_mode_requires_a_model(model):
+    env = {"LLM_PROXY_URL": "http://127.0.0.1:9"}
+    if model is not None:
+        env["LLM_PROXY_MODEL"] = model
+
+    with pytest.raises(ConfigError, match="LLM_PROXY_MODEL"):
+        build_llm(env)
+
+
+# Stub
+
+
+def test_stub_returns_exact_text_from_top_chunk():
+    def refuse(request):
+        raise AssertionError("the stub must not use the network")
+
+    llm = build_llm({}, transport=httpx.MockTransport(refuse))
+
+    assert llm.answer("Do cats purr?", CHUNKS) == "[stub] Based on cats.md: Cats purr."
+
+
+# Proxy
+
+
+def test_proxy_request_url_headers_model_and_messages():
+    requests = []
+    llm = build_llm(PROXY_ENV, transport=recording_transport(requests))
+
+    assert llm.answer("Do cats purr?", CHUNKS) == "canned"
+
+    [request] = requests
+    assert request.method == "POST"
+    assert str(request.url) == "http://127.0.0.1:9/v1/chat/completions"
+    assert request.headers["Authorization"] == f"Bearer {KEY}"
+    assert request.headers["Content-Type"] == "application/json"
+    body = json.loads(request.content)
+    assert set(body) == {"model", "messages"}
+    assert body["model"] == "test-model"
+    system, user = body["messages"]
+    assert system["role"] == "system"
+    assert "only" in system["content"].lower()
+    assert "context" in system["content"].lower()
+    assert "not enough" in system["content"].lower()
+    assert user["role"] == "user"
+    content = user["content"]
+    positions = [
+        content.index(part)
+        for part in ["cats.md", "Cats purr.", "dogs.md", "Dogs bark.", "Do cats purr?"]
+    ]
+    assert positions == sorted(positions)
+
+
+def test_proxy_strips_trailing_slash():
+    requests = []
+    env = {**PROXY_ENV, "LLM_PROXY_URL": "http://127.0.0.1:9/api/v1/"}
+    build_llm(env, transport=recording_transport(requests)).answer("q", CHUNKS)
+
+    assert str(requests[0].url) == "http://127.0.0.1:9/api/v1/chat/completions"
+
+
+@pytest.mark.parametrize("key", [None, ""])
+def test_proxy_sends_no_auth_header_without_a_key(key):
+    requests = []
+    env = {k: v for k, v in PROXY_ENV.items() if k != "LLM_PROXY_API_KEY"}
+    if key is not None:
+        env["LLM_PROXY_API_KEY"] = key
+    build_llm(env, transport=recording_transport(requests)).answer("q", CHUNKS)
+
+    assert "Authorization" not in requests[0].headers
+
+
+def test_proxy_uses_a_30_second_timeout():
+    requests = []
+    build_llm(PROXY_ENV, transport=recording_transport(requests)).answer("q", CHUNKS)
+
+    assert set(requests[0].extensions["timeout"].values()) == {30.0}
+
+
+def fails_with(exception_type):
+    def handler(request):
+        raise exception_type(f"boom {KEY}", request=request)
+
+    return handler
+
+
+def replies(*args, **kwargs):
+    return lambda request: httpx.Response(*args, **kwargs)
+
+
+FAILURES = {
+    "connection error": fails_with(httpx.ConnectError),
+    "timeout": fails_with(httpx.ReadTimeout),
+    "status 500": replies(500, json=completion("secret upstream body")),
+    "status 401": replies(401, text="secret upstream body"),
+    "redirect": replies(302, headers={"Location": "http://127.0.0.1:9/x"}),
+    "invalid json": replies(200, text="secret upstream body"),
+    "invalid utf-8": replies(200, content=b"\xff\xfe\xfa"),
+    "not an object": replies(200, json=["secret upstream body"]),
+    "no choices": replies(200, json={}),
+    "empty choices": replies(200, json={"choices": []}),
+    "choices not a list": replies(200, json={"choices": "text"}),
+    "no message": replies(200, json={"choices": [{}]}),
+    "no content": replies(200, json={"choices": [{"message": {}}]}),
+    "null content": replies(200, json=completion(None)),
+    "non-string content": replies(200, json=completion(42)),
+    "empty content": replies(200, json=completion("")),
+}
+
+
+@pytest.mark.parametrize("handler", FAILURES.values(), ids=FAILURES.keys())
+def test_proxy_failures_raise_llm_error_without_leaking(handler, caplog):
+    caplog.set_level("DEBUG")
+    llm = build_llm(PROXY_ENV, transport=httpx.MockTransport(handler))
+
+    with pytest.raises(LLMError) as caught:
+        llm.answer("q", CHUNKS)
+
+    error = caught.value
+    assert KEY not in str(error)
+    assert "secret upstream body" not in str(error)
+    # No chained exception that would carry either into a traceback.
+    assert error.__cause__ is None
+    assert error.__suppress_context__ or error.__context__ is None
+    assert KEY not in caplog.text
+    assert "secret upstream body" not in caplog.text
+
+
+def test_unusable_proxy_url_raises_llm_error():
+    env = {**PROXY_ENV, "LLM_PROXY_URL": "http://127.0.0.1:notaport"}
+
+    with pytest.raises(LLMError):
+        build_llm(env).answer("q", CHUNKS)
+EOF
+
+cat > backend/tests/test_api.py <<'EOF'
+from pathlib import Path
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import create_app
+from app.retrieval import DocumentError
+
+FALLBACK = "I couldn't find anything relevant in the documents."
+KEY = "dummy-test-key"
+
+
+@pytest.fixture
+def docs(tmp_path):
+    (tmp_path / "cats.md").write_text("# Cats\n\nCats purr when content.", encoding="utf-8")
+    (tmp_path / "rockets.txt").write_text(
+        "Rockets burn fuel to reach orbit.\n\nBoosters separate early.", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def client_for(docs, handler=None, **env):
+    transport = httpx.MockTransport(handler) if handler else None
+    return TestClient(create_app({"DOCS_DIR": str(docs), **env}, transport=transport))
+
+
+def proxy_client(docs, handler):
+    return client_for(
+        docs,
+        handler,
+        LLM_PROXY_URL="http://127.0.0.1:9/v1",
+        LLM_PROXY_MODEL="test-model",
+        LLM_PROXY_API_KEY=KEY,
+    )
+
+
+def test_health_reports_chunk_count(docs):
+    response = client_for(docs).get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "chunks": 3}
+
+
+def test_empty_folder_starts_with_zero_chunks(tmp_path):
+    client = client_for(tmp_path)
+
+    assert client.get("/health").json() == {"status": "ok", "chunks": 0}
+    assert client.post("/ask", json={"question": "cats"}).json()["answer"] == FALLBACK
+
+
+def test_successful_ask_has_the_response_shape(docs):
+    response = client_for(docs).post("/ask", json={"question": "Why do cats purr?"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"answer", "sources", "mode"}
+    assert body["mode"] == "stub"
+    assert body["answer"] == "[stub] Based on cats.md: # Cats\nCats purr when content."
+    [source] = body["sources"]
+    assert set(source) == {"file", "text", "score"}
+    assert source["file"] == "cats.md"
+    assert source["text"] == "# Cats\nCats purr when content."
+    assert source["score"] > 0
+
+
+def test_question_is_trimmed(docs):
+    seen = []
+
+    def handler(request):
+        seen.append(request.content.decode())
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    proxy_client(docs, handler).post("/ask", json={"question": "  \n cats \t "})
+
+    assert "cats" in seen[0]
+    assert "\\t" not in seen[0]
+
+
+def test_question_of_1000_characters_after_trimming_is_accepted(docs):
+    question = "  " + "a" * 1000 + "  "
+
+    assert client_for(docs).post("/ask", json={"question": question}).status_code == 200
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"question": ""},
+        {"question": "   \n\t "},
+        {"question": "a" * 1001},
+        {"question": 5},
+        {"question": None},
+        {},
+        [],
+    ],
+)
+def test_invalid_questions_get_422(docs, body):
+    assert client_for(docs).post("/ask", json=body).status_code == 422
+
+
+def test_no_match_returns_fallback_without_calling_the_llm(docs):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(500)
+
+    response = proxy_client(docs, handler).post("/ask", json={"question": "volcano"})
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": FALLBACK, "sources": [], "mode": "proxy"}
+    assert calls == []
+
+
+def test_proxy_answer_is_returned(docs):
+    def handler(request):
+        return httpx.Response(200, json={"choices": [{"message": {"content": "From proxy"}}]})
+
+    body = proxy_client(docs, handler).post("/ask", json={"question": "rockets"}).json()
+
+    assert body["answer"] == "From proxy"
+    assert body["mode"] == "proxy"
+    assert body["sources"][0]["file"] == "rockets.txt"
+
+
+def test_llm_error_returns_502_without_leaking(docs, caplog):
+    caplog.set_level("DEBUG")
+
+    def handler(request):
+        return httpx.Response(500, text=f"upstream secret {KEY}")
+
+    response = proxy_client(docs, handler).post("/ask", json={"question": "rockets"})
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "LLM request failed"}
+    assert KEY not in caplog.text
+    assert "upstream secret" not in caplog.text
+
+
+def test_documents_are_read_once_at_startup(docs):
+    client = client_for(docs)
+    (docs / "late.md").write_text("volcano", encoding="utf-8")
+
+    assert client.get("/health").json()["chunks"] == 3
+    assert client.post("/ask", json={"question": "volcano"}).json()["sources"] == []
+
+
+def test_missing_documents_folder_stops_startup(tmp_path):
+    with pytest.raises(DocumentError):
+        create_app({"DOCS_DIR": str(tmp_path / "missing")})
+
+
+def test_factory_reads_the_process_environment(docs, monkeypatch):
+    monkeypatch.setenv("DOCS_DIR", str(docs))
+    monkeypatch.delenv("LLM_PROXY_URL", raising=False)
+
+    assert TestClient(create_app()).get("/health").json()["chunks"] == 3
+
+
+@pytest.mark.parametrize("env", [{}, {"DOCS_DIR": ""}])
+def test_default_documents_folder_is_data_at_project_root(env, tmp_path, monkeypatch):
+    # Records the folder instead of reading it: tests must not depend on data/.
+    folders = []
+    monkeypatch.setattr("app.main.load_chunks", lambda folder: folders.append(folder) or [])
+    monkeypatch.chdir(tmp_path)
+
+    create_app(env)
+
+    assert folders == [Path(__file__).resolve().parents[2] / "data"]
+EOF
+backend/.venv/bin/python -m pytest backend/tests -q 2>&1 | tail -12
+2026-11-26T19:30:11+00:00 | +07:50 | done  Bash (2.8s, ok): set -e
+cat > backend/tests/test_retrieval.py <<'EOF'
+import pytest
+
+from app.retrieval import (
+    DocumentError,
+    I
+    =============================== warnings summary ===============================
+    backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+      /home/lenovo/claude_kk_root/project_7/backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+        from starlette.testclient import TestClient as TestClient  # noqa
+    
+    -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+    =========================== short test summary info ============================
+    ERROR backend/tests/test_api.py
+    ERROR backend/tests/test_llm.py
+    ERROR backend/tests/test_retrieval.py
+    !!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+    1 warning, 3 errors in 1.21s
+2026-11-26T19:30:12+00:00 | +07:52 | claude: Tests fail as expected because the modules don't exist yet. Now the backend implementation.
+2026-11-26T19:30:33+00:00 | +08:13 | start Bash: set -e
+touch backend/app/__init__.py
+cat > backend/app/retrieval.py <<'EOF'
+"""Loading, chunking and BM25 ranking of local documents."""
+
+import math
+import re
+from collections import Counter
+from dataclasses import dataclass
+from pathlib import Path
+
+MAX_CHUNK_CHARS = 800
+MAX_RESULTS = 3
+K1 = 1.5
+B = 0.75
+SUFFIXES = (".md", ".txt")
+STOPWORDS = frozenset(
+    "a an and are as at be by can do does for from how i in is it of on or that "
+    "the this to was what when where which who why with you".split()
+)
+# Runs of Unicode letters and digits: "\w" without the underscore.
+TOKEN_PATTERN = re.compile(r"[^\W_]+")
+
+
+class DocumentError(Exception):
+    """The documents folder cannot be loaded."""
+
+
+@dataclass(frozen=True)
+class Chunk:
+    file: str
+    position: int
+    text: str
+
+
+@dataclass(frozen=True)
+class Result:
+    chunk: Chunk
+    score: float
+
+
+def load_chunks(folder: Path) -> list[Chunk]:
+    """Chunk every .md and .txt file directly inside the folder, by file name."""
+    if not folder.is_dir():
+        raise DocumentError(f"Documents folder not found or not a directory: {folder}")
+    paths = sorted(
+        (p for p in folder.iterdir() if p.name.endswith(SUFFIXES) and p.is_file()),
+        key=lambda p: p.name,
+    )
+    chunks = []
+    for path in paths:
+        try:
+            # "utf-8-sig" is UTF-8 that also drops a leading byte order mark.
+            text = path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError as error:
+            raise DocumentError(f"Document is not valid UTF-8: {path} ({error})") from error
+        chunks.extend(
+            Chunk(file=path.name, position=position, text=piece)
+            for position, piece in enumerate(chunk_text(text))
+        )
+    return chunks
+
+
+def chunk_text(text: str) -> list[str]:
+    """Split text on blank lines, attach headings, and cap the chunk length."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    chunks = []
+    headings: list[str] = []
+    for block in re.split(r"\n\s*\n", text):
+        block = block.strip()
+        if not block:
+            continue
+        if _is_heading_block(block):
+            headings.append(block)
+            continue
+        chunks.extend(_split_long("\n".join([*headings, block])))
+        headings = []
+    # Headings still pending here have no following block and are dropped.
+    return chunks
+
+
+def _is_heading_block(block: str) -> bool:
+    return all(line.lstrip().startswith("#") for line in block.split("\n"))
+
+
+def _split_long(text: str) -> list[str]:
+    pieces = []
+    while len(text) > MAX_CHUNK_CHARS:
+        # Whitespace at index MAX_CHUNK_CHARS still leaves a full-length piece.
+        cut = next(
+            (i for i in range(MAX_CHUNK_CHARS, 0, -1) if text[i].isspace()),
+            MAX_CHUNK_CHARS,
+        )
+        pieces.append(text[:cut].rstrip())
+        text = text[cut:].lstrip()
+    if text:
+        pieces.append(text)
+    return pieces
+
+
+def tokenize(text: str) -> list[str]:
+    return [t for t in TOKEN_PATTERN.findall(text.lower()) if t not in STOPWORDS]
+
+
+class Index:
+    """An in-memory BM25 index over chunks."""
+
+    def __init__(self, chunks: list[Chunk]):
+        self.chunks = list(chunks)
+        self._counts = [Counter(tokenize(c.text)) for c in self.chunks]
+        self._lengths = [counts.total() for counts in self._counts]
+        self._average = sum(self._lengths) / len(self._lengths) if self._lengths else 0.0
+        self._containing = Counter(token for counts in self._counts for token in counts)
+
+    def search(self, question: str) -> list[Result]:
+        """Return the best matching chunks, at most MAX_RESULTS, all scoring above 0."""
+        # dict.fromkeys keeps the order, so float sums are the same on every run.
+        tokens = list(dict.fromkeys(tokenize(question)))
+        total = len(self.chunks)
+        idf = {
+            t: math.log(1 + (total - self._containing[t] + 0.5) / (self._containing[t] + 0.5))
+            for t in tokens
+        }
+        results = []
+        for chunk, counts, length in zip(self.chunks, self._counts, self._lengths):
+            score = 0.0
+            for token in tokens:
+                frequency = counts[token]
+                if frequency:
+                    norm = K1 * (1 - B + B * length / self._average)
+                    score += idf[token] * frequency * (K1 + 1) / (frequency + norm)
+            if score > 0:
+                results.append(Result(chunk=chunk, score=score))
+        results.sort(key=lambda r: (-r.score, r.chunk.file, r.chunk.position))
+        return results[:MAX_RESULTS]
+EOF
+cat > backend/app/llm.py <<'EOF'
+"""The language model: a built-in stub, or an OpenAI-compatible proxy."""
+
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+
+import httpx
+
+from app.retrieval import Chunk
+
+TIMEOUT_SECONDS = 30.0
+SYSTEM_PROMPT = (
+    "Answer the question using only the supplied context. "
+    "If the context is not enough to answer, say so."
+)
+
+
+class ConfigError(Exception):
+    """The LLM settings are incomplete."""
+
+
+class LLMError(Exception):
+    """The proxy request failed. Never carries the API key or the response body."""
+
+
+@dataclass(frozen=True)
+class LLM:
+    mode: str  # "stub" or "proxy"
+    answer: Callable[[str, Sequence[Chunk]], str]
+
+
+def build_llm(env: Mapping[str, str], transport: httpx.BaseTransport | None = None) -> LLM:
+    """Choose the mode: proxy if LLM_PROXY_URL is non-empty, otherwise stub."""
+    url = env.get("LLM_PROXY_URL", "")
+    if not url:
+        return LLM(mode="stub", answer=_stub_answer)
+
+    model = env.get("LLM_PROXY_MODEL", "")
+    if not model:
+        raise ConfigError("LLM_PROXY_MODEL is required when LLM_PROXY_URL is set")
+    key = env.get("LLM_PROXY_API_KEY", "")
+    endpoint = f"{url.rstrip('/')}/chat/completions"
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
+
+    def answer(question: str, chunks: Sequence[Chunk]) -> str:
+        body = {"model": model, "messages": _messages(question, chunks)}
+        # "from None" keeps the original exception, which may quote the key or
+        # the upstream body, out of any traceback.
+        try:
+            with httpx.Client(transport=transport, timeout=TIMEOUT_SECONDS) as client:
+                response = client.post(endpoint, headers=headers, json=body)
+        except (httpx.HTTPError, httpx.InvalidURL, UnicodeError):
+            raise LLMError("The request to the LLM proxy failed") from None
+        if not response.is_success:
+            raise LLMError(f"The LLM proxy returned status {response.status_code}")
+        try:
+            content = response.json()["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise LLMError("The LLM proxy returned an unusable response") from None
+        if not isinstance(content, str) or not content:
+            raise LLMError("The LLM proxy returned no answer text")
+        return content
+
+    return LLM(mode="proxy", answer=answer)
+
+
+def _stub_answer(question: str, chunks: Sequence[Chunk]) -> str:
+    top = chunks[0]
+    return f"[stub] Based on {top.file}: {top.text}"
+
+
+def _messages(question: str, chunks: Sequence[Chunk]) -> list[dict[str, str]]:
+    context = "\n\n".join(f"[File: {c.file}]\n{c.text}" for c in chunks)
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Context:\n\n{context}\n\nQuestion: {question}"},
+    ]
+EOF
+cat > backend/app/main.py <<'EOF'
+"""App factory, settings and endpoints."""
+
+import os
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Annotated, Literal
+
+import httpx
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, StringConstraints
+
+from app.llm import LLMError, build_llm
+from app.retrieval import Index, load_chunks
+
+DEFAULT_DOCS_DIR = Path(__file__).resolve().parents[2] / "data"
+NO_MATCH_ANSWER = "I couldn't find anything relevant in the documents."
+
+
+class AskRequest(BaseModel):
+    question: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)
+    ]
+
+
+class Source(BaseModel):
+    file: str
+    text: str
+    score: float
+
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: list[Source]
+    mode: Literal["stub", "proxy"]
+
+
+class Health(BaseModel):
+    status: Literal["ok"]
+    chunks: int
+
+
+def create_app(
+    env: Mapping[str, str] | None = None,
+    transport: httpx.BaseTransport | None = None,
+) -> FastAPI:
+    """Build the app from the environment, reading and indexing the documents once."""
+    env = os.environ if env is None else env
+    llm = build_llm(env, transport=transport)
+    docs_dir = env.get("DOCS_DIR", "")
+    index = Index(load_chunks(Path(docs_dir) if docs_dir else DEFAULT_DOCS_DIR))
+    app = FastAPI(title="Minimal RAG")
+
+    @app.get("/health")
+    def health() -> Health:
+        return Health(status="ok", chunks=len(index.chunks))
+
+    @app.post("/ask")
+    def ask(request: AskRequest) -> AskResponse:
+        results = index.search(request.question)
+        if not results:
+            return AskResponse(answer=NO_MATCH_ANSWER, sources=[], mode=llm.mode)
+        try:
+            answer = llm.answer(request.question, [r.chunk for r in results])
+        except LLMError:
+            raise HTTPException(status_code=502, detail="LLM request failed") from None
+        sources = [Source(file=r.chunk.file, text=r.chunk.text, score=r.score) for r in results]
+        return AskResponse(answer=answer, sources=sources, mode=llm.mode)
+
+    return app
+EOF
+head -8 backend/tests/test_retrieval.py
+backend/.venv/bin/python -m pytest backend/tests -q 2>&1 | tail -30
+2026-11-26T19:30:35+00:00 | +08:15 | done  Bash (2.2s, ok): set -e
+touch backend/app/__init__.py
+cat > backend/app/retrieval.py <<'EOF'
+"""Loading, chunking and BM25 ranking of loc
+    import math
+    
+    import pytest
+    
+    from app.retrieval import (
+        DocumentError,
+        Index,
+        chunk_text,
+    ........................................................................ [ 86%]
+    ...........                                                              [100%]
+    =============================== warnings summary ===============================
+    backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+      /home/lenovo/claude_kk_root/project_7/backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+        from starlette.testclient import TestClient as TestClient  # noqa
+    
+    -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+    83 passed, 1 warning in 1.03s
+2026-11-26T19:30:37+00:00 | +08:16 | claude: Backend: 83 tests pass. Next, the frontend config and tests, again before the implementation.
+2026-11-26T19:31:02+00:00 | +08:42 | start Bash: set -e
+cd frontend
+cat > tsconfig.json <<'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
+EOF
+cat > vitest.config.mts <<'EOF'
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    // Component tests opt into jsdom with a "@vitest-environment" comment.
+    environment: "node",
+    include: ["tests/**/*.test.{ts,tsx}"],
+  },
+});
+EOF
+cat > tests/route.test.ts <<'EOF'
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { POST } from "../app/api/ask/route";
+
+const fetchMock = vi.fn<typeof fetch>();
+
+function ask(body: string = JSON.stringify({ question: "cats" })) {
+  return POST(
+    new Request("http://127.0.0.1/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    }),
+  );
+}
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+  vi.stubEnv("BACKEND_URL", "http://127.0.0.1:9999");
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
+
+describe("POST /api/ask", () => {
+  it.each(["not json", "", "{"])("rejects invalid JSON %j with 400", async (body) => {
+    const response = await ask(body);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ detail: "Invalid JSON" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards the body to <BACKEND_URL>/ask", async () => {
+    fetchMock.mockResolvedValue(Response.json({}));
+
+    await ask(JSON.stringify({ question: "cats" }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://127.0.0.1:9999/ask");
+    expect(init?.method).toBe("POST");
+    expect(new Headers(init?.headers).get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(init?.body as string)).toEqual({ question: "cats" });
+  });
+
+  it("reads BACKEND_URL on every request and tolerates a trailing slash", async () => {
+    fetchMock.mockImplementation(async () => Response.json({}));
+
+    await ask();
+    vi.stubEnv("BACKEND_URL", "http://127.0.0.1:7777/");
+    await ask();
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://127.0.0.1:9999/ask",
+      "http://127.0.0.1:7777/ask",
+    ]);
+  });
+
+  it.each([undefined, ""])("defaults to port 8000 when BACKEND_URL is %j", async (value) => {
+    vi.stubEnv("BACKEND_URL", value);
+    fetchMock.mockResolvedValue(Response.json({}));
+
+    await ask();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:8000/ask");
+  });
+
+  it.each([
+    [200, { answer: "a", sources: [], mode: "stub" }],
+    [422, { detail: [{ msg: "too short" }] }],
+    [502, { detail: "LLM request failed" }],
+  ])("passes through status %i and its body", async (status, body) => {
+    fetchMock.mockResolvedValue(Response.json(body, { status }));
+
+    const response = await ask();
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual(body);
+  });
+
+  it("applies a 35 second timeout", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    fetchMock.mockResolvedValue(Response.json({}));
+
+    await ask();
+
+    expect(timeout).toHaveBeenCalledWith(35_000);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBe(timeout.mock.results[0].value);
+  });
+
+  it.each([
+    ["an unreachable backend", () => Promise.reject(new TypeError("fetch failed"))],
+    ["a timeout", () => Promise.reject(new DOMException("timed out", "TimeoutError"))],
+    ["a non-JSON reply", async () => new Response("<html>oops</html>", { status: 200 })],
+    ["a non-JSON error", async () => new Response("Internal Server Error", { status: 500 })],
+    ["an empty reply", async () => new Response("", { status: 200 })],
+  ])("returns 502 for %s", async (_name, reply) => {
+    fetchMock.mockImplementation(reply);
+
+    const response = await ask();
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ detail: "Backend unavailable" });
+  });
+});
+EOF
+cat > tests/AskForm.test.tsx <<'EOF'
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import Page from "../app/page";
+import AskForm from "../components/AskForm";
+
+const fetchMock = vi.fn<typeof fetch>();
+
+const ANSWER = {
+  answer: "[stub] Based on cats.md: Cats purr.",
+  sources: [
+    { file: "cats.md", text: "Cats purr.", score: 1.2345 },
+    { file: "dogs.txt", text: "Dogs <b>bark</b>.", score: 0.5 },
+  ],
+  mode: "stub",
+};
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const input = () => screen.getByLabelText<HTMLInputElement>("Question");
+const button = () => screen.getByRole<HTMLButtonElement>("button", { name: "Ask" });
+const type = (value: string) => fireEvent.change(input(), { target: { value } });
+
+/** Type a question, submit the form and let the request settle. */
+async function submit(question = "Do cats purr?") {
+  type(question);
+  await act(async () => {
+    fireEvent.click(button());
+  });
+}
+
+/** A fetch reply that stays pending until resolved by the test. */
+function deferred() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((done) => {
+    resolve = done;
+  });
+  fetchMock.mockReturnValueOnce(promise);
+  return resolve;
+}
+
+describe("page", () => {
+  it("shows the heading and the form", () => {
+    render(<Page />);
+
+    expect(screen.getByRole("heading", { name: "Ask the docs" })).toBeTruthy();
+    expect(input().maxLength).toBe(1000);
+    expect(input().type).toBe("text");
+    expect(button().type).toBe("submit");
+  });
+});
+
+describe("AskForm", () => {
+  it("disables the button while the trimmed input is empty", () => {
+    render(<AskForm />);
+
+    expect(button().disabled).toBe(true);
+    type("   ");
+    expect(button().disabled).toBe(true);
+    type("cats");
+    expect(button().disabled).toBe(false);
+  });
+
+  it("does not send a blank question when the form is submitted", () => {
+    render(<AskForm />);
+    type("   ");
+
+    fireEvent.submit(input().form!);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("posts the trimmed question on form submit (Enter)", async () => {
+    fetchMock.mockResolvedValue(Response.json(ANSWER));
+    render(<AskForm />);
+    type("  Do cats purr?  ");
+
+    await act(async () => {
+      fireEvent.submit(input().form!);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/ask");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({ question: "Do cats purr?" });
+  });
+
+  it("disables the button and shows Thinking… while loading", async () => {
+    const resolve = deferred();
+    render(<AskForm />);
+    expect(screen.queryByText("Thinking…")).toBeNull();
+
+    await submit();
+
+    expect(button().disabled).toBe(true);
+    expect(screen.getByText("Thinking…")).toBeTruthy();
+    fireEvent.submit(input().form!);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => resolve(Response.json(ANSWER)));
+
+    expect(button().disabled).toBe(false);
+    expect(screen.queryByText("Thinking…")).toBeNull();
+  });
+
+  it("renders the answer and sources as plain text", async () => {
+    fetchMock.mockResolvedValue(Response.json(ANSWER));
+    const { container } = render(<AskForm />);
+
+    await submit();
+
+    expect(screen.getByText(ANSWER.answer)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sources" })).toBeTruthy();
+    const items = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toContain("cats.md");
+    expect(items[0]).toContain("1.23");
+    expect(items[0]).not.toContain("1.2345");
+    expect(items[0]).toContain("Cats purr.");
+    expect(items[1]).toContain("dogs.txt");
+    expect(items[1]).toContain("0.50");
+    expect(items[1]).toContain("Dogs <b>bark</b>.");
+    expect(container.querySelector("b")).toBeNull();
+    expect(screen.queryByText("No matching sources.")).toBeNull();
+  });
+
+  it("says when there are no matching sources", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ answer: "Nothing found.", sources: [], mode: "stub" }),
+    );
+    render(<AskForm />);
+
+    await submit();
+
+    expect(screen.getByText("Nothing found.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sources" })).toBeTruthy();
+    expect(screen.getByText("No matching sources.")).toBeTruthy();
+    expect(screen.queryByRole("listitem")).toBeNull();
+  });
+
+  it("shows a string error detail", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ detail: "Backend unavailable" }, { status: 502 }),
+    );
+    render(<AskForm />);
+
+    await submit();
+
+    expect(screen.getByRole("alert").textContent).toBe("Backend unavailable");
+  });
+
+  it.each([
+    ["a non-string detail", Response.json({ detail: [{ msg: "bad" }] }, { status: 422 }), 422],
+    ["no detail", Response.json({}, { status: 500 }), 500],
+    ["a null body", Response.json(null, { status: 503 }), 503],
+    ["a non-JSON body", new Response("oops", { status: 504 }), 504],
+    ["a non-JSON success", new Response("oops", { status: 200 }), 200],
+  ])("shows the status for %s", async (_name, reply, status) => {
+    fetchMock.mockResolvedValue(reply);
+    render(<AskForm />);
+
+    await submit();
+
+    expect(screen.getByRole("alert").textContent).toBe(`Request failed (${status})`);
+    expect(button().disabled).toBe(false);
+  });
+
+  it("reports a network failure", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<AskForm />);
+
+    await submit();
+
+    expect(screen.getByRole("alert").textContent).toBe("Request failed");
+    expect(button().disabled).toBe(false);
+  });
+
+  it("clears the previous answer on a new submission", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(ANSWER));
+    render(<AskForm />);
+    await submit();
+    deferred();
+
+    await submit("Another question");
+
+    expect(screen.queryByText(ANSWER.answer)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Sources" })).toBeNull();
+  });
+
+  it("clears the previous error on a new submission", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    render(<AskForm />);
+    await submit();
+    deferred();
+
+    await submit("Another question");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+EOF
+npm test 2>&1 | tail -20
+2026-11-26T19:31:14+00:00 | +08:54 | done  Bash (11.6s, ok): set -e
+cd frontend
+cat > tsconfig.json <<'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.
+    ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+    
+     FAIL  tests/route.test.ts [ tests/route.test.ts ]
+    Error: Cannot find module '../app/api/ask/route' imported from /home/lenovo/claude_kk_root/project_7/frontend/tests/route.test.ts
+     ❯ tests/route.test.ts:3:1
+          1| import { afterEach, beforeEach, describe, expect, it, vi } from "vites…
+          2|
+          3| import { POST } from "../app/api/ask/route";
+           | ^
+          4|
+          5| const fetchMock = vi.fn<typeof fetch>();
+    
+    ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+    
+    
+     Test Files  2 failed (2)
+          Tests  no tests
+       Start at  19:31:08
+       Duration  5.58s (environment 99%, worker 1%)
+2026-11-26T19:31:27+00:00 | +09:07 | start Bash: set -e
+cd /home/lenovo/claude_kk_root/project_7/frontend
+cat > next.config.ts <<'EOF'
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // Keep Turbopack inside frontend/ even if a lock file exists further up.
+  turbopack: { root: __dirname },
+};
+
+export default nextConfig;
+EOF
+cat > lib/types.ts <<'EOF'
+export interface Source {
+  file: string;
+  text: string;
+  score: number;
+}
+
+export interface AskResponse {
+  answer: string;
+  sources: Source[];
+  mode: "stub" | "proxy";
+}
+
+export interface ErrorResponse {
+  detail: string;
+}
+EOF
+cat > app/api/ask/route.ts <<'EOF'
+import type { ErrorResponse } from "../../../lib/types";
+
+const DEFAULT_BACKEND_URL = "http://127.0.0.1:8000";
+const TIMEOUT_MS = 35_000;
+
+function failure(status: number, detail: string): Response {
+  return Response.json({ detail } satisfies ErrorResponse, { status });
+}
+
+/** Forward a question to the FastAPI backend and pass its reply through. */
+export async function POST(request: Request): Promise<Response> {
+  let body: string;
+  try {
+    body = await request.text();
+    JSON.parse(body);
+  } catch {
+    return failure(400, "Invalid JSON");
+  }
+
+  const base = (process.env.BACKEND_URL || DEFAULT_BACKEND_URL).replace(/\/+$/, "");
+  try {
+    const reply = await fetch(`${base}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      cache: "no-store",
+      // Also covers reading the reply body.
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const data: unknown = await reply.json();
+    return Response.json(data, { status: reply.status });
+  } catch {
+    return failure(502, "Backend unavailable");
+  }
+}
+EOF
+cat > components/AskForm.tsx <<'EOF'
+"use client";
+
+import { type FormEvent, useState } from "react";
+
+import type { AskResponse } from "../lib/types";
+
+type Outcome = { result: AskResponse } | { error: string } | null;
+
+async function ask(question: string): Promise<Outcome> {
+  let response: Response;
+  try {
+    response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+  } catch {
+    return { error: "Request failed" };
+  }
+  const data = await response.json().catch(() => undefined);
+  if (response.ok && data !== undefined) {
+    return { result: data as AskResponse };
+  }
+  const detail: unknown = data?.detail;
+  return {
+    error: typeof detail === "string" ? detail : `Request failed (${response.status})`,
+  };
+}
+
+export default function AskForm() {
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome>(null);
+  const trimmed = question.trim();
+  const blocked = loading || trimmed === "";
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (blocked) return;
+    setOutcome(null);
+    setLoading(true);
+    setOutcome(await ask(trimmed));
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="question">Question</label>
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+          <input
+            id="question"
+            type="text"
+            maxLength={1000}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            style={{ flex: 1, font: "inherit", padding: "0.4rem" }}
+          />
+          <button type="submit" disabled={blocked} style={{ font: "inherit", padding: "0.4rem 1rem" }}>
+            Ask
+          </button>
+        </div>
+      </form>
+
+      {loading && <p role="status">Thinking…</p>}
+
+      {outcome && "error" in outcome && (
+        <p role="alert" style={{ color: "#b00020" }}>
+          {outcome.error}
+        </p>
+      )}
+
+      {outcome && "result" in outcome && (
+        <section>
+          <h2>Answer</h2>
+          <p style={{ whiteSpace: "pre-wrap" }}>{outcome.result.answer}</p>
+          <h2>Sources</h2>
+          {outcome.result.sources.length === 0 ? (
+            <p>No matching sources.</p>
+          ) : (
+            <ul>
+              {outcome.result.sources.map((source, index) => (
+                <li key={index}>
+                  <strong>{source.file}</strong> (score {source.score.toFixed(2)})
+                  <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+    </>
+  );
+}
+EOF
+cat > app/layout.tsx <<'EOF'
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+
+export const metadata: Metadata = {
+  title: "Ask the docs",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          lineHeight: 1.5,
+          maxWidth: "40rem",
+          margin: "2rem auto",
+          padding: "0 1rem",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+EOF
+cat > app/page.tsx <<'EOF'
+import AskForm from "../components/AskForm";
+
+export default function Page() {
+  return (
+    <main>
+      <h1>Ask the docs</h1>
+      <AskForm />
+    </main>
+  );
+}
+EOF
+npm test 2>&1 | tail -30
+cp tsconfig.json /tmp/p7_tsconfig.before.$$
+NEXT_TELEMETRY_DISABLED=1 npm run build 2>&1 | tail -30
+diff /tmp/p7_tsconfig.before.$$ tsconfig.json && echo "tsconfig unchanged"
+rm /tmp/p7_tsconfig.before.$$
+ls -a . ; npx --no-install tsc --noEmit && echo typecheck ok
+2026-11-26T19:35:21+00:00 | +13:01 | done  Bash (233.8s, ok): set -e
+cd /home/lenovo/claude_kk_root/project_7/frontend
+cat > next.config.ts <<'EOF'
+import type { NextConfig } from "n
+    > minimal-rag-frontend@0.1.0 test
+    > vitest run
+    
+    
+     RUN  v5.1.2 /home/lenovo/claude_kk_root/project_7/frontend
+    
+    
+     Test Files  2 passed (2)
+          Tests  32 passed (32)
+       Start at  19:31:32
+       Duration  30.94s (import 35%, tests 33%, environment 21%, transform 11%)
+    
+    
+    > minimal-rag-frontend@0.1.0 build
+    > next build
+    
+    ▲ Next.js 16.4.6 (Turbopack)
+    ✓ Running next.config.ts took 2.5s
+    
+      Creating an optimized production build ...
+    ✓ Compiled successfully in 53s
+      Running TypeScript ...
+    ✓ Finished writing to filesystem cache in 10.3s
+      Finished TypeScript in 46s ...
+      Collecting page data using 5 workers ...
+      Generating static pages using 5 workers (0/4) ...
+      Generating static pages using 5 workers (1/4) 
+      Generating static pages using 5 workers (2/4) 
+      Generating static pages using 5 workers (3/4) 
+    ✓ Generating static pages using 5 workers (4/4) in 7.4s
+      Finalizing page optimization ...
+    
+    Route (app)
+    ┌ ○ /
+    ├ ○ /_not-found
+    └ ƒ /api/ask
+    
+    
+    ○  (Static)   prerendered as static content
+    ƒ  (Dynamic)  server-rendered on demand
+    
+    tsconfig unchanged
+    .
+    ..
+    .next
+    app
+    components
+    lib
+    next-env.d.ts
+    next.config.ts
+    node_modules
+    package-lock.json
+    package.json
+    tests
+    tsconfig.json
+    vitest.config.mts
+    typecheck ok
+2026-11-26T19:35:30+00:00 | +13:10 | claude: Frontend: 32 tests pass, and the build and type check are clean. Now the end-to-end test, its mock LLM and fixtures, the sample data and `test.sh`.
+2026-11-26T19:36:10+00:00 | +13:49 | start Bash: set -e
+cd /home/lenovo/claude_kk_root/project_7
+cat > frontend/vitest.config.mts <<'EOF'
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    // Component tests opt into jsdom with a "@vitest-environment" comment.
+    environment: "node",
+    include: ["tests/**/*.test.{ts,tsx}"],
+    // Generous, so a busy machine does not fail a passing test.
+    testTimeout: 20_000,
+  },
+});
+EOF
+cat > e2e/fixtures/docs/lighthouse.md <<'EOF'
+# Lighthouse keeping
+
+The lighthouse keeper polishes the lens every morning and winds the clockwork
+that turns the lamp.
+EOF
+cat > e2e/fixtures/docs/beekeeping.md <<'EOF'
+# Beekeeping
+
+Honeybees store nectar in the hive and fan it with their wings until it thickens
+into honey.
+EOF
+cat > e2e/fixtures/docs/glacier.txt <<'EOF'
+A glacier forms where snow survives the summer and compacts into ice that slowly
+flows downhill.
+EOF
+cat > e2e/mock_llm.py <<'EOF'
+"""A mock OpenAI-compatible server on a loopback port, standard library only."""
+
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+CANNED_ANSWER = "Canned answer from the mock LLM."
+
+
+class MockLLM:
+    """Records every POST. Set `fail` to make it answer with status 500."""
+
+    def __init__(self):
+        self.requests = []  # dicts with "path", "headers" and "body"
+        self.fail = False
+        mock = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers.get("Content-Length", 0))
+                mock.requests.append(
+                    {
+                        "path": self.path,
+                        "headers": {k.lower(): v for k, v in self.headers.items()},
+                        "body": json.loads(self.rfile.read(length)),
+                    }
+                )
+                if mock.fail:
+                    self._reply(500, {"error": "mock failure"})
+                else:
+                    message = {"role": "assistant", "content": CANNED_ANSWER}
+                    self._reply(200, {"choices": [{"message": message}]})
+
+            def _reply(self, status, payload):
+                data = json.dumps(payload).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, format, *args):
+                pass
+
+        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self._server.server_port}"
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc_info):
+        self._server.shutdown()
+        self._server.server_close()
+        self._thread.join()
+EOF
+cat > e2e/test_e2e.py <<'EOF'
+"""End to end: real `next start` and Uvicorn processes talking over loopback HTTP.
+
+The frontend must already be built (`npm --prefix frontend run build`).
+"""
+
+import os
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
+
+import httpx
+import pytest
+
+from mock_llm import CANNED_ANSWER, MockLLM
+
+ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "frontend"
+FIXTURES = ROOT / "e2e" / "fixtures" / "docs"
+FALLBACK = "I couldn't find anything relevant in the documents."
+DUMMY_KEY = "dummy-e2e-key"
+MODEL = "mock-model"
+STARTUP_TIMEOUT = 90
+# Settings that must not leak in from the developer's shell.
+ISOLATED = {
+    "DOCS_DIR", "BACKEND_URL", "LLM_PROXY_URL", "LLM_PROXY_API_KEY", "LLM_PROXY_MODEL",
+    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy",
+}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def stop_servers_on_signals():
+    """Turn SIGTERM and SIGHUP into an interrupt, so that teardown still runs."""
+
+    def interrupt(signum, frame):
+        raise KeyboardInterrupt(f"received signal {signum}")
+
+    previous = {s: signal.signal(s, interrupt) for s in (signal.SIGTERM, signal.SIGHUP)}
+    yield
+    for signum, handler in previous.items():
+        signal.signal(signum, handler)
+
+
+def free_port():
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def stop_group(process):
+    """Stop the server and everything it started: its whole process group."""
+    for signum in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            break
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            continue
+    process.wait(timeout=10)
+
+
+@contextmanager
+def server(name, command, ready_path, env, cwd):
+    """Run a server on a free port, wait until it answers, and always stop it."""
+    port = free_port()
+    url = f"http://127.0.0.1:{port}"
+    clean = {k: v for k, v in os.environ.items() if k not in ISOLATED}
+    with tempfile.TemporaryFile() as log:
+        process = subprocess.Popen(
+            [*command, "--port", str(port)],
+            cwd=cwd,
+            env={**clean, "NEXT_TELEMETRY_DISABLED": "1", **env},
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        try:
+            wait_until_ready(name, process, url + ready_path, log)
+            yield url
+        finally:
+            stop_group(process)
+
+
+def wait_until_ready(name, process, url, log):
+    deadline = time.monotonic() + STARTUP_TIMEOUT
+    with httpx.Client(trust_env=False, timeout=10) as client:
+        while process.poll() is None and time.monotonic() < deadline:
+            try:
+                if client.get(url).status_code == 200:
+                    # Our process must be the one answering on this port.
+                    time.sleep(0.2)
+                    if process.poll() is None:
+                        return
+            except httpx.TransportError:
+                time.sleep(0.2)
+            else:
+                time.sleep(0.2)
+    log.seek(0)
+    output = log.read().decode(errors="replace")
+    state = "timed out" if process.poll() is None else f"exited with {process.returncode}"
+    pytest.fail(f"{name} did not start ({state}). Output:\n{output}", pytrace=False)
+
+
+@contextmanager
+def app_stack(backend_env):
+    """Start the backend and a frontend pointed at it; yield an HTTP client."""
+    backend_command = [
+        sys.executable, "-m", "uvicorn", "app.main:create_app",
+        "--factory", "--host", "127.0.0.1",
+    ]
+    next_command = [str(FRONTEND / "node_modules" / ".bin" / "next"), "start",
+                    "--hostname", "127.0.0.1"]
+    env = {"DOCS_DIR": str(FIXTURES), **backend_env}
+    with server("Uvicorn", backend_command, "/health", env, ROOT / "backend") as backend:
+        frontend_env = {"BACKEND_URL": backend}
+        with server("Next.js", next_command, "/", frontend_env, FRONTEND) as frontend:
+            with httpx.Client(base_url=frontend, trust_env=False, timeout=60) as client:
+                yield client
+
+
+@pytest.fixture(scope="module")
+def stub_app():
+    with app_stack({}) as client:
+        yield client
+
+
+@pytest.fixture(scope="module")
+def mock_llm():
+    with MockLLM() as mock:
+        yield mock
+
+
+@pytest.fixture(scope="module")
+def proxy_app(mock_llm):
+    env = {
+        "LLM_PROXY_URL": f"{mock_llm.url}/v1",
+        "LLM_PROXY_API_KEY": DUMMY_KEY,
+        "LLM_PROXY_MODEL": MODEL,
+    }
+    with app_stack(env) as client:
+        yield client
+
+
+@pytest.fixture
+def mock(mock_llm):
+    mock_llm.requests.clear()
+    mock_llm.fail = False
+    return mock_llm
+
+
+def ask(client, question):
+    return client.post("/api/ask", json={"question": question})
+
+
+def test_page_loads(stub_app):
+    response = stub_app.get("/")
+
+    assert response.status_code == 200
+    assert "Ask the docs" in response.text
+
+
+def test_stub_answers_a_matching_question(stub_app):
+    response = ask(stub_app, "How do honeybees make honey?")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "stub"
+    assert body["answer"].startswith("[stub]")
+    assert body["sources"][0]["file"] == "beekeeping.md"
+
+
+def test_stub_falls_back_for_an_unrelated_question(stub_app):
+    response = ask(stub_app, "Quarterly revenue forecast?")
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": FALLBACK, "sources": [], "mode": "stub"}
+
+
+def test_proxy_returns_the_llm_answer(proxy_app, mock):
+    response = ask(proxy_app, "How does a glacier form?")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == CANNED_ANSWER
+    assert body["mode"] == "proxy"
+    [request] = mock.requests
+    assert request["path"] == "/v1/chat/completions"
+    assert request["headers"]["authorization"] == f"Bearer {DUMMY_KEY}"
+    assert request["body"]["model"] == MODEL
+    prompt = request["body"]["messages"][-1]["content"]
+    assert "glacier.txt" in prompt
+    assert "snow survives the summer" in prompt
+
+
+def test_proxy_failure_returns_502(proxy_app, mock):
+    mock.fail = True
+
+    response = ask(proxy_app, "How does a glacier form?")
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "LLM request failed"}
+    assert len(mock.requests) == 1
+EOF
+cat > data/getting-started.md <<'EOF'
+# Getting started
+
+This sample app answers questions about the Markdown and text files in the
+documents folder.
+
+## Adding documents
+
+Put `.md` or `.txt` files directly inside the documents folder, then restart the
+backend. Documents are read and indexed only once, at startup.
+EOF
+cat > data/retrieval.md <<'EOF'
+# How retrieval works
+
+Each document is split into chunks on blank lines. A heading is kept together
+with the text that follows it.
+
+## Ranking
+
+Chunks are ranked with BM25, a keyword scoring method. The three best matching
+chunks are returned as sources. Synonyms are not matched.
+EOF
+cat > data/solar-system.md <<'EOF'
+# The solar system
+
+The Sun holds eight planets in orbit. Mercury is the closest planet to the Sun
+and Neptune is the farthest.
+
+## Mars
+
+Mars is called the red planet because iron oxide covers its surface. It has two
+small moons, Phobos and Deimos.
+EOF
+cat > test.sh <<'EOF'
+#!/usr/bin/env bash
+# Run every test. Network access is needed only for first-time dependency setup.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+step() { printf '\n==> %s\n' "$*"; }
+fail() { printf 'test.sh: %s\n' "$*" >&2; exit 1; }
+
+# 1. Tools
+node_version="v$(<.nvmrc)"
+have_node() { command -v node >/dev/null 2>&1 && [ "$(node --version)" = "$node_version" ]; }
+
+if ! have_node; then
+  nvm_script="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+  if [ -s "$nvm_script" ]; then
+    export NVM_DIR="${nvm_script%/nvm.sh}"
+    # nvm is not safe under "set -u" (nor "set -e").
+    set +eu
+    # shellcheck disable=SC1090
+    . "$nvm_script" --no-use
+    nvm use "$node_version" >/dev/null
+    set -eu
+  fi
+fi
+have_node || fail "Node.js $node_version is not available. Install it, e.g. 'nvm install ${node_version#v}'."
+command -v python3 >/dev/null 2>&1 || fail "python3 is not available."
+
+# 2. Setup: only when missing or when the pinned file changed. The copy stored in
+# the installed folder is written last, so a failed install is retried.
+python=backend/.venv/bin/python
+python_stamp=backend/.venv/requirements.installed.txt
+if [ ! -x "$python" ] || ! cmp -s backend/requirements.txt "$python_stamp"; then
+  step "Installing backend dependencies"
+  rm -f "$python_stamp"
+  python3 -m venv backend/.venv
+  "$python" -m pip install -r backend/requirements.txt
+  cp backend/requirements.txt "$python_stamp"
+fi
+
+node_stamp=frontend/node_modules/.package-lock.installed.json
+if ! cmp -s frontend/package-lock.json "$node_stamp"; then
+  step "Installing frontend dependencies"
+  npm ci --prefix frontend
+  cp frontend/package-lock.json "$node_stamp"
+fi
+
+# 3. Isolate from the caller's settings.
+unset DOCS_DIR BACKEND_URL LLM_PROXY_URL LLM_PROXY_API_KEY LLM_PROXY_MODEL
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+export NEXT_TELEMETRY_DISABLED=1
+
+# 4. Test
+step "Backend unit tests"
+"$python" -m pytest backend/tests
+step "Frontend unit tests"
+npm --prefix frontend test
+step "Frontend build"
+npm --prefix frontend run build
+step "End-to-end tests"
+"$python" -m pytest e2e
+
+step "All tests passed"
+EOF
+chmod +x test.sh
+cat > .env.example <<'EOF'
+DOCS_DIR=
+LLM_PROXY_URL=
+LLM_PROXY_API_KEY=
+LLM_PROXY_MODEL=
+BACKEND_URL=
+NEXT_TELEMETRY_DISABLED=
+EOF
+cat > README.md <<'EOF'
+# Minimal RAG
+
+A Next.js page sends a question to a FastAPI server. The server retrieves relevant
+text from local files (BM25) and passes it to an LLM: a built-in stub by default,
+or an optional OpenAI-compatible proxy. See [SPEC.md](SPEC.md).
+
+## Requirements
+
+- Node.js 26.13.1 (see `.nvmrc`) with npm 11.20.0
+- Python 3.14.4 with `venv`
+
+## Setup
+
+From the project root:
+
+```bash
+nvm use
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.txt
+npm ci --prefix frontend
+```
+
+## Usage
+
+Start the backend and the frontend in two terminals, both from the project root.
+No environment variables and no API key are needed.
+
+Terminal 1, the backend on port 8000:
+
+```bash
+backend/.venv/bin/python -m uvicorn app.main:create_app --factory --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+Terminal 2, the frontend:
+
+```bash
+npm --prefix frontend run dev
+```
+
+Open the address that Next.js prints and ask about the sample documents in
+`data/`, for example "Why is Mars called the red planet?". The page shows a
+`[stub]` answer and the sources behind it.
+
+If port 8000 is taken, pick another one for `--port` and start the frontend with
+`BACKEND_URL` set to `http://127.0.0.1:<port>`. For another frontend port, use
+`npm --prefix frontend run dev -- --port <port>`.
+
+For a production build, use `npm --prefix frontend run build` and then
+`npm --prefix frontend start`.
+
+### Documents
+
+The backend reads the `*.md` and `*.txt` files directly inside the documents
+folder (UTF-8, no subfolders) once, at startup. Restart it after changing them.
+
+### Environment variables
+
+| Name | Used by | Purpose |
+|---|---|---|
+| `DOCS_DIR` | backend | Documents folder (default: `data/`) |
+| `LLM_PROXY_URL` | backend | Enables proxy mode; API base address, including any version path |
+| `LLM_PROXY_API_KEY` | backend | Optional bearer key |
+| `LLM_PROXY_MODEL` | backend | Model name; required in proxy mode |
+| `BACKEND_URL` | frontend server | FastAPI base address (default: port 8000 on `127.0.0.1`) |
+| `NEXT_TELEMETRY_DISABLED` | `test.sh` | Turns off Next.js telemetry |
+
+The backend does **not** load `.env` files: export its variables in the shell that
+starts it. `.env.example` lists the names. Never commit secrets.
+
+In proxy mode the backend sends the question and the retrieved text to
+`<LLM_PROXY_URL>/chat/completions`.
+
+## Tests
+
+```bash
+./test.sh
+```
+
+This installs dependencies when they are missing or their pinned file changed,
+then runs the backend unit tests, the frontend unit tests, the frontend build and
+the end-to-end tests. It stops at the first failure. Only the first-time setup
+needs network access; the tests use mocks, fixtures and loopback connections on
+free ports. No real LLM is called.
+
+`StarletteDeprecationWarning` about `httpx2` is expected.
+
+## Choices made while building
+
+Points the specification left open:
+
+- Sample documents are in `data/`, test fixtures in `e2e/fixtures/docs/`.
+- `test.sh` also fails if Node.js is present but not the `.nvmrc` version and nvm
+  cannot select it. It tracks `backend/requirements.txt` and
+  `frontend/package-lock.json` to decide when to reinstall.
+- A UTF-8 byte order mark at the start of a document is ignored.
+- Redirects from the LLM proxy count as failures (non-2xx).
+- A trailing slash on `BACKEND_URL` is ignored.
+- The page sends the question trimmed.
+- Styling is a few inline styles.
+- `next.config.ts` sets the Turbopack root to `frontend/`.
+- `.gitignore` ignores `.env*` except `.env.example`, and also the generated
+  `next-env.d.ts`.
+- The Vitest timeout is raised to 20 seconds so a busy machine does not fail
+  passing tests.
+EOF
+./test.sh 2>&1 | tail -60; echo "EXIT ${PIPESTATUS[0]}"
+grep -n -i 'agentRules\|AGENTS.md' frontend/node_modules/next/dist/server/config-shared.js | head
+2026-11-26T19:44:26+00:00 | +22:06 | done  Bash (496.7s, ok): set -e
+cd /home/lenovo/claude_kk_root/project_7
+cat > frontend/vitest.config.mts <<'EOF'
+import react from "@vitejs/plug
+    ======================== 83 passed, 1 warning in 6.10s =========================
+    
+    ==> Frontend unit tests
+    
+    > minimal-rag-frontend@0.1.0 test
+    > vitest run
+    
+    
+     RUN  v5.1.2 /home/lenovo/claude_kk_root/project_7/frontend
+    
+    
+     Test Files  2 passed (2)
+          Tests  32 passed (32)
+       Start at  19:41:35
+       Duration  18.25s (environment 59%, tests 21%, import 13%, transform 6%, worker 1%)
+    
+    
+    ==> Frontend build
+    
+    > minimal-rag-frontend@0.1.0 build
+    > next build
+    
+    ▲ Next.js 16.4.6 (Turbopack)
+    ✓ Running next.config.ts took 538ms
+    
+      Creating an optimized production build ...
+    ✓ Compiled successfully in 9.9s
+      Running TypeScript ...
+      Finished TypeScript in 32.7s ...
+      Collecting page data using 5 workers ...
+      Generating static pages using 5 workers (0/4) ...
+      Generating static pages using 5 workers (1/4) 
+      Generating static pages using 5 workers (2/4) 
+      Generating static pages using 5 workers (3/4) 
+    ✓ Generating static pages using 5 workers (4/4) in 5.7s
+      Finalizing page optimization ...
+    
+    Route (app)
+    ┌ ○ /
+    ├ ○ /_not-found
+    └ ƒ /api/ask
+    
+    
+    ○  (Static)   prerendered as static content
+    ƒ  (Dynamic)  server-rendered on demand
+    
+    
+    ==> End-to-end tests
+    ============================= test session starts ==============================
+    platform linux -- Python 3.14.4, pytest-9.2.0, pluggy-1.7.0
+    rootdir: /home/lenovo/claude_kk_root/project_7
+    configfile: pytest.ini
+    plugins: anyio-4.16.0
+    collected 5 items
+    
+    e2e/test_e2e.py .....                                                    [100%]
+    
+    ========================= 5 passed in 70.64s (0:01:10) =========================
+    
+    ==> All tests passed
+    EXIT 0
+    382:        agentRules: config.agentRules,
+2026-11-26T19:44:42+00:00 | +22:21 | claude: Everything passes on the first full run. I'll tidy one readiness loop, find out why the e2e step takes about 70 seconds, and check whether `next dev` writes extra files into the project.
+2026-11-26T19:44:45+00:00 | +22:24 | start Bash: cd /home/lenovo/claude_kk_root/project_7
+python3 - <<'EOF'
+from pathlib import Path
+p = Path("e2e/test_e2e.py")
+s = p.read_text()
+start = s.index("            try:\n                if client.get(url)")
+end = s.index("    log.seek(0)")
+new = '''            try:
+                if client.get(url).status_code == 200:
+                    # Our process must be the one answering on this port.
+                    time.sleep(0.2)
+                    if process.poll() is None:
+                        return
+            except httpx.TransportError:
+                pass
+            time.sleep(0.2)
+'''
+p.write_text(s[:start] + new + s[end:])
+EOF
+backend/.venv/bin/python -m pytest e2e -q --durations=8 2>&1 | grep -v Warning | tail -20
+echo ---; grep -rn "agentRules" frontend/node_modules/next/dist --include=*.js -l | head
+grep -rn "agentRules" frontend/node_modules/next/dist/server/lib/*.js frontend/node_modules/next/dist/server/config.js frontend/node_modules/next/dist/cli/*.js 2>/dev/null | cut -c1-300 | head
+2026-11-26T19:47:06+00:00 | +24:45 | done  Bash (140.7s, ok): cd /home/lenovo/claude_kk_root/project_7
+python3 - <<'EOF'
+from pathlib import Path
+p = Path("e2e/test_e2e.py")
+s = p.re
+    .....                                                                    [100%]
+    ============================= slowest 8 durations ==============================
+    42.87s setup    e2e/test_e2e.py::test_proxy_returns_the_llm_answer
+    33.32s setup    e2e/test_e2e.py::test_page_loads
+    9.84s call     e2e/test_e2e.py::test_proxy_returns_the_llm_answer
+    3.08s teardown e2e/test_e2e.py::test_proxy_failure_returns_502
+    1.78s call     e2e/test_e2e.py::test_stub_answers_a_matching_question
+    0.67s call     e2e/test_e2e.py::test_proxy_failure_returns_502
+    0.46s call     e2e/test_e2e.py::test_stub_falls_back_for_an_unrelated_question
+    0.13s call     e2e/test_e2e.py::test_page_loads
+    5 passed in 95.31s (0:01:35)
+    ---
+    frontend/node_modules/next/dist/esm/server/config-schema.js
+    frontend/node_modules/next/dist/esm/server/config-shared.js
+    frontend/node_modules/next/dist/esm/server/lib/router-server.js
+    frontend/node_modules/next/dist/esm/server/lib/start-server.js
+    frontend/node_modules/next/dist/server/config-schema.js
+    frontend/node_modules/next/dist/server/config-shared.js
+    frontend/node_modules/next/dist/server/lib/start-server.js
+    frontend/node_modules/next/dist/server/lib/router-server.js
+    frontend/node_modules/next/dist/server/lib/start-server.js:406:                    logAgentFileSync(await (0, _appinfolog.syncAgentRulesForDev)(dir, initResult.agentRules !== false), (files)=>`Generated ${files} for AI agents. Set \`agentRules: false\` in next.config to disable.`, (files)=>`Removed 
+    frontend/node_modules/next/dist/server/lib/router-server.js:820:        agentRules: config.agentRules,
+2026-11-26T19:47:33+00:00 | +25:13 | start Bash: cd /home/lenovo/claude_kk_root/project_7
+sed -i 's/^STARTUP_TIMEOUT = 90$/STARTUP_TIMEOUT = 180/' e2e/test_e2e.py
+python3 - <<'EOF'
+from pathlib import Path
+p = Path("frontend/next.config.ts")
+p.write_text(p.read_text().replace(
+    "  turbopack: { root: __dirname },\n",
+    "  turbopack: { root: __dirname },\n  // Stop `next dev` from writing AGENTS.md and CLAUDE.md files.\n  agentRules: false,\n"))
+p = Path("README.md")
+p.write_text(p.read_text().replace(
+    "- `next.config.ts` sets the Turbopack root to `frontend/`.\n",
+    "- `next.config.ts` sets the Turbopack root to `frontend/`, and sets\n  `agentRules: false` so `next dev` does not write AI agent files.\n"))
+EOF
+cat > .smoke.py <<'EOF'
+"""Temporary check of the README commands (dev mode) on free ports."""
+import os, signal, socket, subprocess, sys, tempfile, time
+import httpx
+
+def port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0)); return s.getsockname()[1]
+
+env = {k: v for k, v in os.environ.items() if not k.startswith(("LLM_", "DOCS_"))}
+env["NEXT_TELEMETRY_DISABLED"] = "1"
+b, f = port(), port()
+procs, logs = [], []
+def start(cmd, extra={}):
+    log = tempfile.TemporaryFile(); logs.append(log)
+    p = subprocess.Popen(cmd, env={**env, **extra}, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    procs.append(p); return p
+def wait(url):
+    for _ in range(600):
+        try: return c.get(url)
+        except httpx.TransportError: time.sleep(0.5)
+    raise SystemExit("not ready " + url)
+def stop(p):
+    for s in (signal.SIGTERM, signal.SIGKILL):
+        try: os.killpg(p.pid, s)
+        except ProcessLookupError: break
+        try: p.wait(10)
+        except subprocess.TimeoutExpired: pass
+c = httpx.Client(trust_env=False, timeout=120)
+try:
+    backend = start("backend/.venv/bin/python -m uvicorn app.main:create_app --factory --app-dir backend --host 127.0.0.1".split() + ["--port", str(b)])
+    start(["npm", "--prefix", "frontend", "run", "dev", "--", "--port", str(f), "--hostname", "127.0.0.1"], {"BACKEND_URL": f"http://127.0.0.1:{b}"})
+    print(wait(f"http://127.0.0.1:{b}/health").json())
+    print(wait(f"http://127.0.0.1:{f}/").status_code)
+    for q in ["Why is Mars called the red planet?", "volcano eruption"]:
+        r = c.post(f"http://127.0.0.1:{f}/api/ask", json={"question": q}); print(r.status_code, r.json())
+    stop(backend)
+    r = c.post(f"http://127.0.0.1:{f}/api/ask", json={"question": "mars"}); print(r.status_code, r.json())
+finally:
+    for p in procs: stop(p)
+    logs[1].seek(0); print(logs[1].read().decode()[-1500:])
+EOF
+cp frontend/tsconfig.json .tsconfig.bak
+backend/.venv/bin/python .smoke.py
+echo --- ; diff .tsconfig.bak frontend/tsconfig.json; rm .smoke.py .tsconfig.bak
+find . \( -name node_modules -o -name .venv -o -name .next \) -prune -o -type f -newer SPEC.md -print | grep -v pycache | sort
+2026-11-26T19:48:28+00:00 | +26:08 | done  Bash (54.8s, ok): cd /home/lenovo/claude_kk_root/project_7
+sed -i 's/^STARTUP_TIMEOUT = 90$/STARTUP_TIMEOUT = 180/' e2e/test_e2e.py
+python
+    mall moons, Phobos and Deimos.', 'score': 6.016781071711525}, {'file': 'solar-system.md', 'text': '# The solar system\nThe Sun holds eight planets in orbit. Mercury is the closest planet to the Sun\nand Neptune is the farthest.', 'score': 1.100356629048566}], 'mode': 'stub'}
+    200 {'answer': "I couldn't find anything relevant in the documents.", 'sources': [], 'mode': 'stub'}
+    502 {'detail': 'Backend unavailable'}
+    
+    > minimal-rag-frontend@0.1.0 dev
+    > next dev --port 32897 --hostname 127.0.0.1
+    
+    ▲ Next.js 16.4.6 (Turbopack)
+    - Local:         http://127.0.0.1:32897
+    - Network:       http://127.0.0.1:32897
+    ✓ Ready in 5.8s
+    ✓ Running next.config.ts took 1304ms
+    
+    ○ Compiling / ...
+     GET / 200 in 2.6s (next.js: 1111ms, application-code: 1501ms)
+     POST /api/ask 200 in 1025ms (next.js: 246ms, application-code: 779ms)
+     POST /api/ask 200 in 310ms (next.js: 68ms, application-code: 242ms)
+     POST /api/ask 502 in 162ms (next.js: 20ms, application-code: 142ms)
+    
+    ---
+    ./.env.example
+    ./.gitignore
+    ./.nvmrc
+    ./.pytest_cache/.gitignore
+    ./.pytest_cache/CACHEDIR.TAG
+    ./.pytest_cache/README.md
+    ./.pytest_cache/v/cache/lastfailed
+    ./.pytest_cache/v/cache/nodeids
+    ./README.md
+    ./backend/app/__init__.py
+    ./backend/app/llm.py
+    ./backend/app/main.py
+    ./backend/app/retrieval.py
+    ./backend/requirements.txt
+    ./backend/tests/test_api.py
+    ./backend/tests/test_llm.py
+    ./backend/tests/test_retrieval.py
+    ./data/getting-started.md
+    ./data/retrieval.md
+    ./data/solar-system.md
+    ./e2e/fixtures/docs/beekeeping.md
+    ./e2e/fixtures/docs/glacier.txt
+    ./e2e/fixtures/docs/lighthouse.md
+    ./e2e/mock_llm.py
+    ./e2e/test_e2e.py
+    ./frontend/app/api/ask/route.ts
+    ./frontend/app/layout.tsx
+    ./frontend/app/page.tsx
+    ./frontend/components/AskForm.tsx
+    ./frontend/lib/types.ts
+    ./frontend/next-env.d.ts
+    ./frontend/next.config.ts
+    ./frontend/package-lock.json
+    ./frontend/package.json
+    ./frontend/tests/AskForm.test.tsx
+    ./frontend/tests/route.test.ts
+    ./frontend/tsconfig.json
+    ./frontend/tsconfig.tsbuildinfo
+    ./frontend/vitest.config.mts
+    ./pytest.ini
+    ./test.sh
+    ./timings.log
+2026-11-26T19:48:36+00:00 | +26:16 | start Bash: cd /home/lenovo/claude_kk_root/project_7
+grep -o '"resolved": "https://[^/]*' frontend/package-lock.json | sort | uniq -c
+command -v unshare; unshare -rn sh -c 'ip link set lo up && ip -brief addr' 2>&1
+rm -rf backend/.venv frontend/node_modules frontend/.next frontend/next-env.d.ts frontend/tsconfig.tsbuildinfo .pytest_cache
+start=$(date +%s)
+timeout 590 ./test.sh > /tmp/p7_fresh.$$.log 2>&1; code=$?
+echo "EXIT $code after $(( $(date +%s) - start ))s"; grep -E '^==>|passed|failed|added|rror' /tmp/p7_fresh.$$.log; tail -5 /tmp/p7_fresh.$$.log; rm /tmp/p7_fresh.$$.log
+2026-11-26T20:05:33+00:00 | +36:27 | done  Bash (611.2s, ok): cd /home/lenovo/claude_kk_root/project_7
+grep -o '"resolved": "https://[^/]*' frontend/package-lock.json | sort | uniq -
+        162 "resolved": "https://registry.npmjs.org
+    /usr/bin/unshare
+    lo               UNKNOWN        127.0.0.1/8 ::1/128
+    Command did not complete within its 600s timeout and was moved to the background (ID: bqd5pjp8z). Output is being written to: /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/bqd5pjp8z.output. You will be notified when it completes. If it is still running after 10m in the background, it will be stopped and you will be notified. It is running now: do not start a second copy while it runs. If it is no longer needed, stop it with TaskStop. To check interim output, use Read on that file path.
+    Session cwd remains /home/lenovo/claude_kk_root/project_7; directory changes made by the backgrounded command do not apply to subsequent commands.
+2026-11-26T20:05:48+00:00 | +36:43 | start Bash: cat /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/bqd5pjp8z.output; ls /tmp/p7_fresh.*.log 2>/dev/null; for f in /tmp/p7_fresh.*.log; do grep -E '^==>|passed|failed|added' "$f"; tail -5 "$f"; done
+2026-11-26T20:05:54+00:00 | +36:48 | done  Bash (5.1s, ERROR): cat /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/bqd5pjp8z.output; 
+    Exit code 1
+        162 "resolved": "https://registry.npmjs.org
+    /usr/bin/unshare
+    lo               UNKNOWN        127.0.0.1/8 ::1/128 
+    EXIT 124 after 996s
+    ==> Installing backend dependencies
+    ==> Installing frontend dependencies
+    added 103 packages in 6m
+    ==> Backend unit tests
+    ======================== 83 passed, 1 warning in 8.21s =========================
+    ==> Frontend unit tests
+     Test Files  2 passed (2)
+          Tests  32 passed (32)
+    ==> Frontend build
+    
+    ▲ Next.js 16.4.6 (Turbopack)
+    ✓ Running next.config.ts took 1674ms
+    
+      Creating an optimized production build ...
+    
+    [exited with code 0]
+    ugrep: warning: /tmp/p7_fresh.*.log: No such file or directory
+    tail: cannot open '/tmp/p7_fresh.*.log' for reading: No such file or directory
+2026-11-26T20:06:03+00:00 | +36:58 | start Bash: start=$(date +%s); unshare -rn bash -c 'ip link set lo up && env -u DOCS_DIR -u BACKEND_URL -u LLM_PROXY_URL ./test.sh'; code=$?; echo "OFFLINE EXIT $code after $(( $(date +%s) - start ))s"
+2026-11-26T20:06:07+00:00 | +37:01 | done  Bash (3.8s, ok): start=$(date +%s); unshare -rn bash -c 'ip link set lo up && env -u DOCS_DIR -u BACKEND_URL -u LLM_PROXY_URL ./test.sh';
+    Command running in background with ID: byuh1en14. Output is being written to: /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/byuh1en14.output. You will be notified when it completes. To check interim output, use Read on that file path.
+2026-11-26T20:06:11+00:00 | +37:05 | claude: I'm waiting for the offline run to finish, and I'll report once it does.
+2026-11-26T20:06:15+00:00 | +37:09 | result success turns=14 cost_usd=0.7196128 usage={"input_tokens": 28, "cache_creation_input_tokens": 60303, "cache_read_input_tokens": 571148, "output_tokens": 42123, "output_tokens_details": {"thinking_tokens": 10925}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 60303, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 26, "cache_read_input_tokens": 65744, "cache_creation_input_tokens": 718, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 718}, "type": "message"}], "speed": "standard", "fallback_credit": null}
+2026-11-26T20:09:03+00:00 | +39:57 | start Read: /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/byuh1en14.output
+2026-11-26T20:09:05+00:00 | +40:00 | done  Read (2.9s, ok): /tmp/claude-1000/-home-lenovo-claude-kk-root-project-7/eca22bf5-16a4-4269-b559-8067c76dc7d1/tasks/byuh1en14.output
+    eprecated; install `httpx2` instead.
+    17	    from starlette.testclient import TestClient as TestClient  # noqa
+    18	
+    19	-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+    20	======================== 83 passed, 1 warning in 18.18s ========================
+    21	
+    22	==> Frontend unit tests
+    23	
+    24	> minimal-rag-frontend@0.1.0 test
+    25	> vitest run
+    26	
+    27	
+    28	 RUN  v5.1.2 /home/lenovo/claude_kk_root/project_7/frontend
+    29	
+    30	
+    31	 Test Files  2 passed (2)
+    32	      Tests  32 passed (32)
+    33	   Start at  20:06:47
+    34	   Duration  30.51s (environment 66%, tests 17%, import 14%, transform 3%)
+    35	
+    36	
+    37	==> Frontend build
+    38	
+    39	> minimal-rag-frontend@0.1.0 build
+    40	> next build
+    41	
+    42	▲ Next.js 16.4.6 (Turbopack)
+    43	✓ Running next.config.ts took 1890ms
+    44	
+    45	  Creating an optimized production build ...
+    46	✓ Compiled successfully in 31.3s
+    47	  Running TypeScript ...
+    48	  Finished TypeScript in 19.2s ...
+    49	  Collecting page data using 5 workers ...
+    50	  Generating static pages using 5 workers (0/4) ...
+    51	  Generating static pages using 5 workers (1/4) 
+    52	  Generating static pages using 5 workers (2/4) 
+    53	  Generating static pages using 5 workers (3/4) 
+    54	✓ Generating static pages using 5 workers (4/4) in 3.6s
+    55	  Finalizing page optimization ...
+    56	
+    57	Route (app)
+    58	┌ ○ /
+    59	├ ○ /_not-found
+    60	└ ƒ /api/ask
+    61	
+    62	
+    63	○  (Static)   prerendered as static content
+    64	ƒ  (Dynamic)  server-rendered on demand
+    65	
+    66	
+    67	==> End-to-end tests
+    68	============================= test session starts ==============================
+    69	platform linux -- Python 3.14.4, pytest-9.2.0, pluggy-1.7.0
+    70	rootdir: /home/lenovo/claude_kk_root/project_7
+    71	configfile: pytest.ini
+    72	plugins: anyio-4.16.0
+    73	collected 5 items
+    74	
+    75	e2e/test_e2e.py .....                                                    [100%]
+    76	
+    77	============================== 5 passed in 19.42s ==============================
+    78	
+    79	==> All tests passed
+    80	OFFLINE EXIT 0 after 165s
+    81	
+    82	[exited with code 0]
+    83	
+2026-11-26T20:09:09+00:00 | +40:03 | claude: The offline run passed. Last checks: a failing test must make `./test.sh` exit non-zero, installed versions must match the spec, and no servers should be left running.
+2026-11-26T20:09:12+00:00 | +40:06 | start Bash: cd /home/lenovo/claude_kk_root/project_7
+printf 'def test_deliberate_failure():\n    assert False\n' > backend/tests/test_zz_tmp.py
+./test.sh >/dev/null 2>&1; echo "with a failing test: exit $?"
+rm backend/tests/test_zz_tmp.py; rm -rf .pytest_cache
+echo "--- version mismatches (none expected):"
+node -e 'const p=require("./frontend/package.json"),l=require("./frontend/package-lock.json");for(const [n,v] of Object.entries({...p.dependencies,...p.devDependencies})){const got=l.packages["node_modules/"+n].version;if(got!==v)console.log(n,v,got)}'
+diff <(backend/.venv/bin/python -m pip freeze | tr 'A-Z_' 'a-z-' | sort) <(tr 'A-Z_' 'a-z-' < backend/requirements.txt | sort) && echo "python set matches"
+echo "--- leftover processes from this project (none expected):"
+for p in /proc/[0-9]*; do c=$(readlink "$p/cwd" 2>/dev/null); case "$c" in "$PWD"/*) echo "${p#/proc/} $c $(tr '\0' ' ' < "$p/cmdline")";; esac; done
+ls -a . frontend
+2026-11-26T20:09:21+00:00 | +40:15 | done  Bash (8.6s, ok): cd /home/lenovo/claude_kk_root/project_7
+printf 'def test_deliberate_failure():\n    assert False\n' > backend/tests/tes
+    with a failing test: exit 1
+    --- version mismatches (none expected):
+    python set matches
+    --- leftover processes from this project (none expected):
+    .:
+    .
+    ..
+    .env.example
+    .gitignore
+    .nvmrc
+    README.md
+    SPEC.md
+    backend
+    data
+    e2e
+    frontend
+    pytest.ini
+    requirements.md
+    test.sh
+    timings.log
+    
+    frontend:
+    .
+    ..
+    .next
+    app
+    components
+    lib
+    next-env.d.ts
+    next.config.ts
+    node_modules
+    package-lock.json
+    package.json
+    tests
+    tsconfig.json
+    vitest.config.mts
+2026-11-26T20:09:27+00:00 | +40:21 | claude: The project is built to `SPEC.md`, and `./test.sh` passes with exit 0, including with the network removed.
+
+| Suite | Result in the final offline run |
+|---|---|
+| Backend unit tests (pytest) | 83 passed |
+| Frontend unit tests (Vitest) | 32 passed |
+| Next.js build | succeeded |
+| End-to-end tests (real Next.js and Uvicorn processes) | 5 passed |
+
+I wrote the backend and frontend unit tests first and saw them fail before writing the code. The end-to-end test came after the code.
+
+**Other checks**
+- **Fresh install:** after deleting the dependencies and build output, `./test.sh` installed both sets and passed both unit suites. My own 590-second limit then stopped it during the Next.js build (exit 124). The offline run afterwards completed every step on that fresh install.
+- **README steps:** the backend and `next dev` on free ports returned a `[stub]` answer with sources, the fallback answer for an unrelated question, and "Backend unavailable" once the backend was stopped.
+- **Failures and versions:** a deliberately failing test made `./test.sh` exit 1, and installed direct and listed dependencies match the spec. I removed that temporary test, and no project processes were left running.
+- **Not checked:** I didn't open the page in a real browser, so the manual browser checks in the acceptance criteria are still yours to do. UI behaviour is covered by the component tests, and proxy mode was only tested against mocks.
+
+**Choices worth knowing about** (all listed in `README.md`)
+- `next.config.ts` sets `agentRules: false`, because `next dev` would otherwise write AI-agent files into the project.
+- `.gitignore` also ignores the generated `next-env.d.ts`.
+- Test timeouts are generous because this machine was slow at times: the frontend install alone took 6 minutes.
+2026-11-26T20:09:27+00:00 | +40:21 | result success turns=3 cost_usd=0.7675624 usage={"input_tokens": 8, "cache_creation_input_tokens": 2784, "cache_read_input_tokens": 201576, "output_tokens": 1664, "output_tokens_details": {"thinking_tokens": 298}, "server_tool_use": {"web_search_requests": 0, "web_fetch_requests": 0}, "service_tier": "standard", "cache_creation": {"ephemeral_1h_input_tokens": 2784, "ephemeral_5m_input_tokens": 0}, "inference_geo": "global", "iterations": [{"input_tokens": 2, "output_tokens": 755, "cache_read_input_tokens": 68262, "cache_creation_input_tokens": 984, "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 984}, "type": "message"}], "speed": "standard", "fallback_credit": null}
+===== attempt 1 rc=0 elapsed 00:47:08 =====
+
+==> Backend unit tests
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/lenovo/claude_kk_root/project_7
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 83 items
+
+backend/tests/test_api.py ....................                           [ 24%]
+backend/tests/test_llm.py .............................                  [ 59%]
+backend/tests/test_retrieval.py ..................................       [100%]
+
+=============================== warnings summary ===============================
+backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /home/lenovo/claude_kk_root/project_7/backend/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 83 passed, 1 warning in 1.42s =========================
+
+==> Frontend unit tests
+
+> minimal-rag-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v5.1.2 /home/lenovo/claude_kk_root/project_7/frontend
+
+
+ Test Files  2 passed (2)
+      Tests  32 passed (32)
+   Start at  20:09:33
+   Duration  8.11s (environment 51%, tests 29%, import 16%, transform 3%, worker 1%)
+
+
+==> Frontend build
+
+> minimal-rag-frontend@0.1.0 build
+> next build
+
+▲ Next.js 16.4.6 (Turbopack)
+✓ Running next.config.ts took 385ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5s
+  Running TypeScript ...
+  Finished TypeScript in 7.9s ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/4) ...
+  Generating static pages using 5 workers (1/4) 
+  Generating static pages using 5 workers (2/4) 
+  Generating static pages using 5 workers (3/4) 
+✓ Generating static pages using 5 workers (4/4) in 1532ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+└ ƒ /api/ask
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+==> End-to-end tests
+============================= test session starts ==============================
+platform linux -- Python 3.14.4, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/lenovo/claude_kk_root/project_7
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 5 items
+
+e2e/test_e2e.py .....                                                    [100%]
+
+============================== 5 passed in 7.13s ===============================
+
+==> All tests passed
