@@ -1,0 +1,105 @@
+"use client";
+
+import { type CSSProperties, type FormEvent, useState } from "react";
+
+import type { AskResponse, ErrorResponse } from "../lib/types";
+
+const preserveLines: CSSProperties = {
+  whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
+};
+
+type Outcome = { result: AskResponse } | { error: string };
+
+async function ask(question: string): Promise<Outcome> {
+  let response: Response;
+  try {
+    response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+  } catch {
+    return { error: "Request failed" };
+  }
+  const body: unknown = await response.json().catch(() => null);
+  if (response.ok && body !== null) {
+    return { result: body as AskResponse };
+  }
+  const detail = (body as Partial<ErrorResponse> | null)?.detail;
+  return {
+    error:
+      typeof detail === "string" ? detail : `Request failed (${response.status})`,
+  };
+}
+
+export default function AskForm() {
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const trimmed = question.trim();
+  const blocked = loading || trimmed === "";
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (blocked) return;
+    setLoading(true);
+    setOutcome(null);
+    setOutcome(await ask(trimmed));
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="question">Question</label>
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+          <input
+            id="question"
+            type="text"
+            maxLength={1000}
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            style={{ flex: 1, font: "inherit", padding: "0.4rem" }}
+          />
+          <button
+            type="submit"
+            disabled={blocked}
+            style={{ font: "inherit", padding: "0.4rem 1rem" }}
+          >
+            Ask
+          </button>
+        </div>
+      </form>
+
+      {loading && <p role="status">Thinking…</p>}
+
+      {outcome && "error" in outcome && (
+        <p role="alert" style={{ color: "#b00020" }}>
+          {outcome.error}
+        </p>
+      )}
+
+      {outcome && "result" in outcome && (
+        <section>
+          <h2>Answer</h2>
+          <p style={preserveLines}>{outcome.result.answer}</p>
+          <h2>Sources</h2>
+          {outcome.result.sources.length === 0 ? (
+            <p>No matching sources.</p>
+          ) : (
+            <ul>
+              {outcome.result.sources.map((source, index) => (
+                <li key={index}>
+                  <strong>{source.file}</strong> (score{" "}
+                  {source.score.toFixed(2)})
+                  <p style={preserveLines}>{source.text}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+    </>
+  );
+}

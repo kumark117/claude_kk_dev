@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Install pinned dependencies if needed, then run every test. Stops at the first failure.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+fail() {
+  echo "test.sh: $*" >&2
+  exit 1
+}
+
+# 1. Tools
+node_version="$(tr -d '[:space:]' < .nvmrc)"
+node_ok() {
+  command -v node >/dev/null 2>&1 && [ "$(node --version)" = "v$node_version" ]
+}
+if ! node_ok; then
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    set +euo pipefail # nvm is not safe under strict mode
+    # shellcheck disable=SC1091
+    . "$NVM_DIR/nvm.sh" --no-use
+    nvm use "$node_version" >/dev/null
+    set -euo pipefail
+  fi
+fi
+node_ok || fail "Node.js $node_version is required (install it with: nvm install $node_version)"
+command -v python3 >/dev/null 2>&1 || fail "python3 is required"
+
+export npm_config_update_notifier=false
+
+# 2. Setup: only when missing or when the pinned file changed
+venv=backend/.venv
+if [ ! -x "$venv/bin/python" ] || ! cmp -s backend/requirements.txt "$venv/requirements.txt"; then
+  echo "== Installing backend dependencies"
+  rm -f "$venv/requirements.txt"
+  python3 -m venv "$venv"
+  "$venv/bin/python" -m pip install -r backend/requirements.txt
+  cp backend/requirements.txt "$venv/requirements.txt"
+fi
+
+npm_stamp=frontend/node_modules/.installed-package-lock.json
+if ! cmp -s frontend/package-lock.json "$npm_stamp"; then
+  echo "== Installing frontend dependencies"
+  npm ci --prefix frontend
+  cp frontend/package-lock.json "$npm_stamp"
+fi
+
+# 3. Isolate from the caller's environment
+unset DOCS_DIR BACKEND_URL LLM_PROXY_URL LLM_PROXY_API_KEY LLM_PROXY_MODEL
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+export NEXT_TELEMETRY_DISABLED=1
+
+# 4. Test
+echo "== Backend unit tests"
+"$venv/bin/python" -m pytest backend/tests
+echo "== Frontend unit tests"
+npm --prefix frontend test
+echo "== Frontend build"
+npm --prefix frontend run build
+echo "== End-to-end tests"
+"$venv/bin/python" -m pytest e2e
+
+echo "== All tests passed"
