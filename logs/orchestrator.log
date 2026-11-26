@@ -1,0 +1,10 @@
+[orch 18:55:50] project_0 build started (running=1, par=2)
+[orch 18:56:36] project_0 build running: 00:00:46 (since first attempt 00:00:46)
+[orch 18:57:36] project_0 build running: 00:01:46 (since first attempt 00:01:46)
+[orch 18:58:36] project_0 build running: 00:02:46 (since first attempt 00:02:46)
+[orch 18:59:37] project_0 build running: 00:03:47 (since first attempt 00:03:47)
+[orch 19:00:37] project_0 build running: 00:04:47 (since first attempt 00:04:47)
+[orch 19:01:37] project_0 build running: 00:05:47 (since first attempt 00:05:47)
+[orch 19:02:38] project_0 build running: 00:06:48 (since first attempt 00:06:48)
+[orch 19:03:22] project_0 attempt 1: claude finished rc=0 after 00:07:32
+[orch 19:03:38] project_0 build PASSED, total 00:07:48
