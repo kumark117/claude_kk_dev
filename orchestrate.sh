@@ -12,6 +12,8 @@ STATE="$ROOT/.state"; LOGS="$ROOT/logs"; TLOG="$ROOT/all_timings.log"
 mkdir -p "$STATE" "$LOGS"
 
 now()  { date +%s; }
+clock() { printf '%02d:%02d:%02d' $(($1 / 3600)) $(($1 % 3600 / 60)) $(($1 % 60)); }
+since() { echo $(( $(now) - $(cat "$1" 2>/dev/null || now) )); }
 say()  { printf '[orch %s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 
 # ISO timestamp | project | phase | event | duration_s
@@ -66,12 +68,15 @@ git_sync() {  # git_sync "message" path... ; commits those paths and pushes
 }
 
 # ---------------------------------- prompts ----------------------------------
-design_prompt() { cat <<'EOF'
-Use the superpowers:brainstorming skill to design the project described in ./requirements.md. Work only in this directory.
-- Ask ONE question at a time, multiple-choice, with a recommended default I can accept with one word. Aim for 15-25 minutes total. Keep it minimal (YAGNI).
+design_prompt() { cat <<EOF
+Use the superpowers:brainstorming skill to design these projects, ALL in this one session: $*
+Each has a requirements.md in its folder. Read them all first.
+- Ask each shared decision ONCE and apply it to every project. Ask project-specific questions only where the requirements differ.
+- Ask ONE question at a time, multiple-choice, with a recommended default I can accept with one word. Keep it minimal (YAGNI).
 - Before choosing versions, check the installed toolchain (node -v, npm -v, python3 --version, etc.) and pin exact versions that work on this machine.
-- When I approve the design, write ./SPEC.md instead of the skill's usual docs/ spec file. It must be self-contained: stack and exact versions; data flow; components and file layout; test plan (unit tests plus an offline end-to-end test using mocks/fixtures, with no network and no real LLM); acceptance criteria; exact test commands, all run by a single ./test.sh that the build must create; environment variable NAMES only (no values).
-- Do not write code, do not run git, and do not go on to planning or implementation. After SPEC.md is written, tell me to type /exit.
+- When I approve a project's design, write <project>/SPEC.md (not the skill's usual docs/ spec file), and only after it is complete create an empty file <project>/.approved. Its build starts as soon as that file exists.
+- Each SPEC.md must be self-contained: stack and exact versions; data flow; components and file layout; test plan (unit tests plus an offline end-to-end test using mocks/fixtures, with no network and no real LLM); acceptance criteria; exact test commands, all run by a single ./test.sh that the build must create; environment variable NAMES only (no values).
+- Write nothing else. No code, no git, no planning or implementation. After the last SPEC.md, tell me to type /exit.
 EOF
 }
 
@@ -83,6 +88,7 @@ SPEC.md is the source of truth. Implement exactly what it says, with no extra fe
 - Create an executable ./test.sh: bash, non-interactive, offline (mocks/fixtures; no real LLM or network calls apart from installing dependencies), idempotent dependency setup (e.g. python3 -m venv .venv, npm install). It must run all unit and end-to-end tests and exit 0 only if all pass. Any server it starts runs in the background and is killed on exit.
 - Write README.md with setup, usage and test instructions. Provide .env.example with variable names only. Never write real secrets.
 - Make sure .gitignore covers .env, .venv, node_modules, .next, __pycache__ and caches.
+- Other builds run in parallel on this machine: use free ports (never assume 3000 or 8000 are free) and never kill processes you did not start.
 - Finish by running ./test.sh and confirming that it passes.
 This is attempt $1. If files already exist from an earlier attempt, continue from them instead of starting over.
 EOF
@@ -95,21 +101,26 @@ build_attempt() {  # runs in the background, records its outcome in .state
   [ -f "$STATE/$p.build.first" ] || now > "$STATE/$p.build.first"
   tlog "$p" build "attempt_${n}_start" 0
   t0=$(now)
+  : > "$out"; echo "build $t0" > "$STATE/$p.task"
+  echo "===== attempt $n start $(date -Iseconds) =====" >> "$LOGS/$p.log"
   ( cd "$dir" && timeout "$BUILD_TIMEOUT_S" "$CLAUDE_BIN" -p --model "$MODEL_BUILD" \
       --max-turns "$MAX_TURNS" --permission-mode acceptEdits \
       --tools "Bash,Read,Write,Edit" --allowedTools "Bash,Read,Write,Edit" \
       --disable-slash-commands --no-session-persistence \
-      "$(build_prompt "$n")" ) < /dev/null > "$out" 2>&1
-  rc=$?; dur=$(( $(now) - t0 ))
-  { echo "===== attempt $n rc=$rc $(date -Iseconds) ====="; cat "$out"; } >> "$LOGS/$p.log"
+      --output-format stream-json --verbose \
+      "$(build_prompt "$n")" ) < /dev/null 2>&1 \
+    | python3 "$ROOT/logstream.py" "$p" "$out" "$TLOG" "$dir/timings.log" >> "$LOGS/$p.log"
+  rc=${PIPESTATUS[0]}; dur=$(( $(now) - t0 ))
+  echo "===== attempt $n rc=$rc elapsed $(clock "$dur") =====" >> "$LOGS/$p.log"
   tlog "$p" build "attempt_${n}_end_rc$rc" "$dur"
+  say "$p attempt $n: claude finished rc=$rc after $(clock "$dur")"
 
   if [ "$rc" -ne 0 ] && tail -n 30 "$out" | grep -qiE 'usage limit|limit reached|hit your limit|limit will reset|resets at|rate.?limit'; then
     wait_s=$WAIT_LIMIT_S; echo $(( $(now) + wait_s )) > "$STATE/limit_until"
     tlog "$p" build usage_limit 0
   else
     if [ -f "$dir/test.sh" ]; then        # the orchestrator re-runs the tests itself
-      t0=$(now)
+      t0=$(now); echo "test $t0" > "$STATE/$p.task"; tlog "$p" test run_start 0
       ( cd "$dir" && timeout "$TEST_TIMEOUT_S" bash ./test.sh ) < /dev/null >> "$LOGS/$p.log" 2>&1
       trc=$?; tlog "$p" test "run_rc$trc" $(( $(now) - t0 ))
     fi
@@ -120,8 +131,8 @@ build_attempt() {  # runs in the background, records its outcome in .state
         if [ -n "$(cd "$ROOT" && git log --format=%H "$(cat "$STATE/$p.design.sha")"..HEAD -- "$p")" ]; then
           dur=$(( $(now) - $(cat "$STATE/$p.build.first") ))
           echo "$dur" > "$STATE/$p.build.secs"; touch "$STATE/$p.build.done"
-          tlog "$p" build passed "$dur"; say "$p build PASSED"
-          rm -f "$STATE/$p.build.pid" "$STATE/$p.build.next"; return 0
+          tlog "$p" build passed "$dur"; say "$p build PASSED, total $(clock "$dur")"
+          rm -f "$STATE/$p.build.pid" "$STATE/$p.build.next" "$STATE/$p.task"; return 0
         fi
         tlog "$p" build no_commit_or_unpushed 0
       else
@@ -138,7 +149,33 @@ build_attempt() {  # runs in the background, records its outcome in .state
     echo $(( $(now) + wait_s )) > "$STATE/$p.build.next"
     tlog "$p" build retry_wait "$wait_s"; say "$p attempt $n failed; retrying in ${wait_s}s"
   fi
-  rm -f "$STATE/$p.build.pid"
+  rm -f "$STATE/$p.build.pid" "$STATE/$p.task"
+}
+
+approve() {  # approve project: commit SPEC.md and queue its build (safe to call twice)
+  local p=$1 el
+  (
+    flock 8
+    [ -f "$STATE/$p.design.done" ] && exit 0
+    git_sync "$p: design (SPEC.md)" "$p" || exit 1
+    (cd "$ROOT" && git rev-parse HEAD) > "$STATE/$p.design.sha"
+    el=$(since "$STATE/design.start"); echo "$el" > "$STATE/$p.design.secs"
+    touch "$STATE/$p.design.done"; tlog "$p" design approved "$el"
+    say "$p SPEC.md approved after $(clock "$el"); build queued"
+  ) 8>"$STATE/approve.lock"
+}
+
+heartbeat() {  # elapsed time of everything still in progress
+  local p task t0 el
+  if [ -f "$STATE/design.start" ] && [ ! -f "$STATE/designs.finished" ]; then
+    el=$(since "$STATE/design.start"); tlog root design running "$el"; say "design session: $(clock "$el") elapsed"
+  fi
+  for p in $(projects); do
+    [ -f "$STATE/$p.task" ] || continue
+    read -r task t0 < "$STATE/$p.task" || continue
+    el=$(( $(now) - t0 )); tlog "$p" "$task" running "$el"
+    say "$p $task running: $(clock "$el") (since first attempt $(clock "$(since "$STATE/$p.build.first")"))"
+  done
 }
 
 running_count() {
@@ -151,12 +188,14 @@ running_count() {
 }
 
 dispatcher() {  # background scheduler: starts builds up to the concurrency limit
-  local p par running pending
+  local p par running pending beat=0
   while :; do
+    if [ $(( $(now) - beat )) -ge "$HEARTBEAT_S" ]; then heartbeat; beat=$(now); fi
     par=$PAR
     [ "$(cat "$STATE/limit_until" 2>/dev/null || echo 0)" -gt "$(now)" ] && par=$LIMIT_PAR
     running=$(running_count); pending=0
     for p in $(projects); do
+      [ -f "$STATE/$p.design.done" ] || { [ -f "$ROOT/$p/.approved" ] && [ -s "$ROOT/$p/SPEC.md" ] && approve "$p"; }
       [ -f "$STATE/$p.design.done" ] || { [ -f "$STATE/designs.finished" ] || pending=1; continue; }
       [ -f "$STATE/$p.build.done" ] || [ -f "$STATE/$p.build.failed" ] && continue
       pending=1
@@ -173,27 +212,33 @@ dispatcher() {  # background scheduler: starts builds up to the concurrency limi
 
 # -------------------------------- design phase --------------------------------
 design_phase() {
-  local p t0 dur ans
-  for p in $(projects); do
-    [ -f "$STATE/$p.design.done" ] && continue
-    while :; do
-      say "DESIGN $p: opening Claude ($MODEL_DESIGN). Approve the design, then type /exit."
-      tlog "$p" design session_start 0; t0=$(now)
-      ( cd "$ROOT/$p" && "$CLAUDE_BIN" --model "$MODEL_DESIGN" --permission-mode acceptEdits "$(design_prompt)" )
-      dur=$(( $(now) - t0 )); tlog "$p" design session_end "$dur"
-      echo $(( $(cat "$STATE/$p.design.secs" 2>/dev/null || echo 0) + dur )) > "$STATE/$p.design.secs"
-      if [ -s "$ROOT/$p/SPEC.md" ]; then
-        if git_sync "$p: design (SPEC.md)" "$p"; then
-          (cd "$ROOT" && git rev-parse HEAD) > "$STATE/$p.design.sha"
-          touch "$STATE/$p.design.done"; tlog "$p" design approved "$(cat "$STATE/$p.design.secs")"
-          say "$p SPEC.md approved; build queued"; break
-        fi
-        say "git sync failed for $p design (secret found or push failed). Fix it, then press Enter to retry."; read -r _
+  local p t0 dur ans todo
+  while :; do
+    todo=()
+    for p in $(projects); do
+      [ -f "$STATE/$p.design.done" ] && continue
+      if [ -s "$ROOT/$p/SPEC.md" ]; then   # already designed: no second session
+        [ -f "$STATE/design.start" ] || now > "$STATE/design.start"
+        approve "$p" || { say "git sync failed for $p (secret found or push failed). Fix it, then press Enter."; read -r _; todo+=(retry); }
       else
-        read -r -p "No SPEC.md in $p. [r]eopen session / [s]kip project? " ans
-        [ "$ans" = s ] && { tlog "$p" design skipped 0; break; }
+        todo+=("$p")
       fi
     done
+    [ ${#todo[@]} -eq 0 ] && break
+    [ "${todo[0]}" = retry ] && continue
+    say "DESIGN (one session): ${todo[*]}. Approve each design, then type /exit."
+    t0=$(now); echo "$t0" > "$STATE/design.start"; tlog root design session_start 0
+    ( cd "$ROOT" && "$CLAUDE_BIN" --model "$MODEL_DESIGN" --permission-mode acceptEdits "$(design_prompt "${todo[@]}")" )
+    dur=$(( $(now) - t0 )); tlog root design session_end "$dur"; say "design session took $(clock "$dur")"
+    ans=
+    for p in "${todo[@]}"; do [ -s "$ROOT/$p/SPEC.md" ] || ans="$ans $p"; done
+    if [ -n "$ans" ]; then
+      read -r -p "No SPEC.md for:$ans. [r]eopen session / [s]kip them? " ans
+      if [ "$ans" = s ]; then
+        for p in "${todo[@]}"; do [ -s "$ROOT/$p/SPEC.md" ] && approve "$p"; done
+        break
+      fi
+    fi
   done
   touch "$STATE/designs.finished"
 }
@@ -237,12 +282,16 @@ report() {
 }
 
 status() {
-  local p
+  local p b task t0
   for p in $(projects); do
-    printf '%-12s design:%-4s build:%-7s attempts:%s\n' "$p" \
+    if [ -f "$STATE/$p.build.done" ]; then b="passed in $(clock "$(cat "$STATE/$p.build.secs")")"
+    elif [ -f "$STATE/$p.build.failed" ]; then b=failed
+    elif [ -f "$STATE/$p.task" ]; then read -r task t0 < "$STATE/$p.task"; b="$task running $(clock $(( $(now) - t0 )))"
+    elif [ -f "$STATE/$p.build.first" ]; then b="waiting, $(clock "$(since "$STATE/$p.build.first")") since first attempt"
+    else b=-; fi
+    printf '%-12s design:%-5s attempts:%-2s build: %s\n' "$p" \
       "$([ -f "$STATE/$p.design.done" ] && echo done || echo -)" \
-      "$( { [ -f "$STATE/$p.build.done" ] && echo passed; } || { [ -f "$STATE/$p.build.failed" ] && echo failed; } || { [ -f "$STATE/$p.build.pid" ] && echo running; } || echo -)" \
-      "$(cat "$STATE/$p.attempts" 2>/dev/null || echo 0)"
+      "$(cat "$STATE/$p.attempts" 2>/dev/null || echo 0)" "$b"
   done
 }
 
@@ -253,8 +302,9 @@ status() {
 dry_run() {
   local sb="$ROOT/.dryrun"; rm -rf "$sb"; mkdir -p "$sb/root"
   git init -q --bare "$sb/remote.git"
-  cp "$ROOT/orchestrate.sh" "$ROOT/config.sh" "$ROOT/.gitignore" "$sb/root/"
+  cp "$ROOT/orchestrate.sh" "$ROOT/logstream.py" "$ROOT/config.sh" "$ROOT/.gitignore" "$sb/root/"
   cp -r "$ROOT/project_0" "$sb/root/"; rm -f "$sb/root/project_0/"{SPEC.md,timings.log}
+  echo "# SPEC (stub, already designed)" > "$sb/root/project_0/SPEC.md"
   for i in 1 2; do mkdir -p "$sb/root/project_$i"; echo "fake requirement $i" > "$sb/root/project_$i/requirements.md"; done
   cat > "$sb/claude" <<'STUB'
 #!/usr/bin/env bash
@@ -265,37 +315,44 @@ if [[ " $* " == *" -p "* ]]; then
   if [ "$p" = project_2 ] && [ $n = 1 ]; then printf '#!/usr/bin/env bash\necho FAIL; exit 1\n' > test.sh
   else printf '#!/usr/bin/env bash\necho stub tests ok\n' > test.sh; fi
   echo "# $p (stub build)" > README.md; echo "ANTHROPIC_API_KEY=sk-ant-FAKEFAKEFAKEFAKEFAKE" > .env
-  echo "stub build done"
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"echo stub"}}]}}'
+  sleep 1
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","content":"stub"}]}}'
+  echo '{"type":"result","subtype":"success","num_turns":1,"is_error":false}'
 else
-  sleep 2; echo "# SPEC (stub) for $p" > SPEC.md; echo "stub design done"
+  for d in project_1 project_2; do sleep 2; echo "# SPEC (stub) $d" > $d/SPEC.md; touch $d/.approved; done; sleep 2; echo "stub design done"
 fi
 STUB
   chmod +x "$sb/claude"
   ( cd "$sb/root" && git init -q -b main && git add -A && git commit -q -m init \
       && git remote add origin "$sb/remote.git" && git push -q origin main ) || return 1
   say "dry run in $sb"
-  ORCH_ROOT="$sb/root" CLAUDE_BIN="$sb/claude" PAR=2 LIMIT_PAR=1 WAIT_LIMIT_S=8 WAIT_FAIL_S=4 POLL_S=1 \
+  ORCH_ROOT="$sb/root" CLAUDE_BIN="$sb/claude" PAR=2 LIMIT_PAR=1 WAIT_LIMIT_S=8 WAIT_FAIL_S=4 POLL_S=1 HEARTBEAT_S=2 \
     PROJECTS=auto bash "$sb/root/orchestrate.sh" run
   echo; echo "---- status ----"; ORCH_ROOT="$sb/root" bash "$sb/root/orchestrate.sh" status
   echo "---- remote log ----"; git --git-dir="$sb/remote.git" log --oneline main
   echo "---- .env pushed? ----"; git --git-dir="$sb/remote.git" ls-tree -r --name-only main | grep -E '\.env$' || echo "no (good)"
   echo "---- all_timings.log ----"; cat "$sb/root/all_timings.log"
+  echo "---- logs/project_1.log ----"; cat "$sb/root/logs/project_1.log"
   echo "---- REPORT.md ----"; cat "$sb/root/REPORT.md"
 }
 
 # ------------------------------------ main ------------------------------------
 run() {
-  rm -f "$STATE/designs.finished"
+  rm -f "$STATE/designs.finished" "$STATE/design.start" "$STATE"/*.task "$STATE"/*.build.pid
   tlog root run start 0; local t0; t0=$(now)
   say "projects: $(projects | tr '\n' ' ')| PAR=$PAR models: $MODEL_DESIGN/$MODEL_BUILD"
-  dispatcher & local dpid=$!
+  local olog="$LOGS/orchestrator.log"
+  # logged to a file so it cannot scribble over the interactive design screen
+  dispatcher >> "$olog" 2>&1 & local dpid=$!
   trap 'say "interrupted; state kept in .state, rerun to resume"; kill 0' INT TERM
   design_phase
   say "all designs done; waiting for builds (tail -f logs/*.log to follow)"
+  tail -n 40 -f --pid="$dpid" "$olog"
   wait "$dpid"
-  tlog root run end $(( $(now) - t0 ))
+  tlog root run end $(( $(now) - t0 )); say "run finished in $(clock $(( $(now) - t0 )))"
   report
-  git_sync "pipeline report and timings" REPORT.md all_timings.log logs orchestrate.sh config.sh README.md .gitignore \
+  git_sync "pipeline report and timings" REPORT.md all_timings.log logs logstream.py orchestrate.sh config.sh README.md .gitignore \
     || say "final git sync failed"
 }
 

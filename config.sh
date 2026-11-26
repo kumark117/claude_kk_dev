@@ -2,7 +2,7 @@
 # e.g.  PAR=1 ./orchestrate.sh
 
 : "${PLAN:=pro}"                 # pro | max
-if [ "$PLAN" = max ]; then : "${PAR:=4}"; else : "${PAR:=2}"; fi   # concurrent builds
+: "${PAR:=10}"                   # max concurrent build+test jobs
 : "${LIMIT_PAR:=1}"              # concurrency while a usage limit is active
 : "${MODEL_DESIGN:=sonnet}"      # model alias for design sessions
 : "${MODEL_BUILD:=sonnet}"       # model alias for headless builds
@@ -13,6 +13,7 @@ if [ "$PLAN" = max ]; then : "${PAR:=4}"; else : "${PAR:=2}"; fi   # concurrent 
 : "${BUILD_TIMEOUT_S:=3600}"     # hard timeout per build attempt
 : "${TEST_TIMEOUT_S:=900}"       # hard timeout for the orchestrator's test run
 : "${POLL_S:=15}"                # scheduler poll interval
+: "${HEARTBEAT_S:=60}"           # how often elapsed time of running tasks is logged
 : "${PROJECTS:=auto}"            # auto = every project_*/requirements.md, or "0 2 3"
 : "${GIT_REMOTE:=origin}"
 : "${GIT_BRANCH:=main}"
