@@ -2,7 +2,7 @@
 # e.g.  PAR=1 ./orchestrate.sh
 
 : "${PLAN:=pro}"                 # pro | max
-: "${PAR:=10}"                   # max concurrent build+test jobs
+: "${PAR:=3}"                    # max concurrent build+test jobs
 : "${LIMIT_PAR:=1}"              # concurrency while a usage limit is active
 : "${MODEL_DESIGN:=sonnet}"      # model alias for design sessions
 : "${MODEL_BUILD:=sonnet}"       # model alias for headless builds

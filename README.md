@@ -29,7 +29,7 @@ To add a project, create `project_N/requirements.md` and rerun.
 1. **Design (once):** a single interactive Sonnet session covers every project that has no `SPEC.md`.
    Shared decisions are asked once. Approving a project writes `SPEC.md` and `.approved`, and its build starts.
    Projects that already have a `SPEC.md` are not designed again.
-2. **Build:** up to `PAR` (default 10) headless build+test jobs run at once. Each works test-first, writes
+2. **Build:** up to `PAR` (default 3) headless build+test jobs run at once. Each works test-first, writes
    `test.sh` and the README, and doesn't run git itself.
 3. **Pass check:** the orchestrator re-runs `test.sh`, commits under a lock, scans for secrets and pushes.
 4. **Failures:** a usage limit means a 30-minute wait with concurrency held at `LIMIT_PAR=1`; any other
