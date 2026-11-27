@@ -1,0 +1,17 @@
+# secrets
+.env*
+!.env.example
+
+# environments and dependencies
+.venv/
+node_modules/
+
+# build output and caches
+.next/
+next-env.d.ts
+*.tsbuildinfo
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+.vite/
